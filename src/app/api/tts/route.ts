@@ -79,7 +79,14 @@ export async function POST(req: Request) {
 
     if (!supabaseServiceKey) {
       return NextResponse.json(
-        { error: "SUPABASE_SERVICE_ROLE_KEY manquante (settings Supabase → API → service_role). Length: " + supabaseServiceKey.length },
+        { 
+          error: "SUPABASE_SERVICE_ROLE_KEY manquante",
+          debug: {
+            hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            keyLength: supabaseServiceKey.length,
+            envVars: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('OPENAI')).sort()
+          }
+        },
         { status: 500 }
       );
     }
