@@ -104,10 +104,10 @@ export async function POST(req: Request) {
     const openai = new OpenAI({ apiKey: openaiKey });
 
     const audioResp = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice,
+      model: "tts-1",
+      voice: voice as "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer",
       input: text,
-      format: "mp3",
+      response_format: "mp3",
     });
 
     const arrayBuffer = await audioResp.arrayBuffer();
