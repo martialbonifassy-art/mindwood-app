@@ -79,10 +79,8 @@ export async function POST(req: Request) {
     const message = langue === "en" ? makeMessageEN(body) : makeMessageFR(body);
 
     return NextResponse.json({ message });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message ?? "Erreur API" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur API";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

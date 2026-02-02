@@ -41,7 +41,10 @@ export default function SetupClient() {
     [form.theme]
   );
 
-  const availableSubthemes = selectedTheme?.subthemes ?? [];
+  const availableSubthemes = useMemo(
+    () => selectedTheme?.subthemes ?? [],
+    [selectedTheme]
+  );
 
   const selectedSubtheme = useMemo(
     () => availableSubthemes.find((s) => s.value === form.sous_theme) ?? null,

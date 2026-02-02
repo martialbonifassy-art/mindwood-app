@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -21,7 +21,7 @@ type PersoRow = {
   voix: "masculin" | "feminin" | string | null;
 };
 
-function cleanText(v: any) {
+function cleanText(v: unknown) {
   const s = String(v ?? "").trim();
   return s.length ? s : "";
 }
@@ -58,10 +58,9 @@ export default function ListenClient() {
   useEffect(() => {
     if (!id_bijou) return;
     void silentLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id_bijou]);
+  }, [id_bijou, silentLoad]);
 
-  async function silentLoad() {
+  const silentLoad = useCallback(async () => {
     setError(null);
     try {
       const { data: b, error: bErr } = await supabase
@@ -71,7 +70,7 @@ export default function ListenClient() {
         .maybeSingle();
 
       if (bErr) throw bErr;
-      if (b) setBijou(b as any);
+      if (b) setBijou(b as BijouRow);
 
       const { data: p, error: pErr } = await supabase
         .from("personnalisations")
@@ -82,11 +81,12 @@ export default function ListenClient() {
         .maybeSingle();
 
       if (pErr) throw pErr;
-      setPerso((p as any) ?? null);
-    } catch (e: any) {
-      setError(e?.message ?? "Erreur lors du chargement.");
+      setPerso((p as PersoRow) ?? null);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erreur lors du chargement.";
+      setError(message);
     }
-  }
+  }, [id_bijou]);
 
   // Typewriter : dès que `message` change
   useEffect(() => {
@@ -110,13 +110,11 @@ export default function ListenClient() {
     }, speed);
 
     return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message]);
 
   // Stop audio si on quitte la page
   useEffect(() => {
     return () => stopAudio();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchBijou() {
@@ -130,8 +128,8 @@ export default function ListenClient() {
       setError(bErr.message);
       return null;
     }
-    if (b) setBijou(b as any);
-    return (b as any) as BijouRow | null;
+    if (b) setBijou(b as BijouRow);
+    return (b as BijouRow) ?? null;
   }
 
   function stopAudio() {
@@ -184,9 +182,10 @@ export default function ListenClient() {
         throw rpcErr;
       }
 
+      type ConsumeCreditResult = { credits_restants?: number | null };
       const newCredits = Array.isArray(rpcData)
-        ? rpcData[0]?.credits_restants
-        : (rpcData as any)?.credits_restants;
+        ? (rpcData as ConsumeCreditResult[])[0]?.credits_restants
+        : (rpcData as ConsumeCreditResult | null)?.credits_restants;
 
       setBijou((prev) =>
         prev ? { ...prev, credits_restants: Number(newCredits ?? prev.credits_restants) } : prev
@@ -223,8 +222,9 @@ export default function ListenClient() {
         `(${voiceTone})`;
 
       setMessage((b.langue === "en" ? en : fr).trim());
-    } catch (e: any) {
-      setError(e?.message ?? "Erreur lors de la génération.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erreur lors de la génération.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -260,12 +260,14 @@ export default function ListenClient() {
     try {
       setSpeaking(true);
 
+      const voice = typeof perso?.voix === "string" ? perso.voix : "feminin";
+
       const r = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: message,
-          voice: (perso?.voix ?? "feminin") as any,
+          voice,
           lang: bijou?.langue ?? "fr",
         }),
       });
@@ -290,9 +292,10 @@ export default function ListenClient() {
           setError("Impossible de lancer l’audio.");
         }
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
       setSpeaking(false);
-      setError(e?.message ?? "Erreur audio.");
+      const message = error instanceof Error ? error.message : "Erreur audio.";
+      setError(message);
     }
   }
 
