@@ -54,12 +54,6 @@ export default function ListenClient() {
     return Boolean(bijou.actif) && Number(bijou.credits_restants) > 0;
   }, [bijou]);
 
-  // Charge silencieusement au montage
-  useEffect(() => {
-    if (!id_bijou) return;
-    void silentLoad();
-  }, [id_bijou, silentLoad]);
-
   const silentLoad = useCallback(async () => {
     setError(null);
     try {
@@ -87,6 +81,12 @@ export default function ListenClient() {
       setError(message);
     }
   }, [id_bijou]);
+
+  // Charge silencieusement au montage
+  useEffect(() => {
+    if (!id_bijou) return;
+    void silentLoad();
+  }, [id_bijou, silentLoad]);
 
   // Typewriter : dès que `message` change
   useEffect(() => {
