@@ -58,14 +58,6 @@ export async function POST(req: Request) {
 
     const bucket = (process.env.SUPABASE_TTS_BUCKET?.trim() || "tts").trim();
 
-    console.log("[TTS API] Debug:", {
-      hasOpenaiKey: !!openaiKey,
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceKey: !!supabaseServiceKey,
-      supabaseUrlValue: supabaseUrl ? supabaseUrl.substring(0, 20) : "EMPTY",
-      serviceKeyLength: supabaseServiceKey.length,
-    });
-
     if (!openaiKey) {
       return NextResponse.json({ error: "OPENAI_API_KEY manquante." }, { status: 500 });
     }
@@ -79,14 +71,7 @@ export async function POST(req: Request) {
 
     if (!supabaseServiceKey) {
       return NextResponse.json(
-        { 
-          error: "SUPABASE_SERVICE_ROLE_KEY manquante",
-          debug: {
-            hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            keyLength: supabaseServiceKey.length,
-            envVars: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('OPENAI')).sort()
-          }
-        },
+        { error: "SUPABASE_SERVICE_ROLE_KEY manquante (settings Supabase → API → service_role)." },
         { status: 500 }
       );
     }
