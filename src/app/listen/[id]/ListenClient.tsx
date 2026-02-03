@@ -350,18 +350,18 @@ export default function ListenClient() {
       const souvenir = cleanText(p?.souvenir);
 
       const res = await fetch("/api/murmure", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    prenom,
-    theme,
-    sous_theme: sous,
-    lieu,
-    souvenir,
-    langue: bijou.langue, // "fr" | "en"
-    voix: p.voix,     // "masculin" | "feminin"
-  }),
-});
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prenom,
+          theme,
+          sous_theme: sous,
+          lieu,
+          souvenir,
+          langue: bijou.langue,
+          voix: p.voix,
+        }),
+      });
 
 if (!res.ok) {
   const err = await res.json().catch(() => ({}));
