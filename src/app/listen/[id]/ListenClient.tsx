@@ -359,7 +359,7 @@ export default function ListenClient() {
     lieu,
     souvenir,
     langue: bijou.langue, // "fr" | "en"
-    voix: perso.voix,     // "masculin" | "feminin"
+    voix: p.voix,     // "masculin" | "feminin"
   }),
 });
 
