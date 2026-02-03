@@ -359,7 +359,7 @@ export default function ListenClient() {
           lieu,
           souvenir,
           langue: bijou.langue,
-          voix: p.voix,
+          voix: p?.voix ?? "feminin",
         }),
       });
 
