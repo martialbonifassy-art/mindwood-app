@@ -338,21 +338,27 @@ export default function ListenClient() {
           ? "Tonalité posée, profonde, protectrice."
           : "Tonalité douce, enveloppante, lumineuse.";
 
-      const fr =
-        `✨ ${prenom}, un murmure inspiré par ${theme}${sous ? " / " + sous : ""}. ` +
-        (lieu ? `Je te retrouve dans ce lieu : ${lieu}. ` : "") +
-        (souvenir ? `Et je garde ce souvenir : "${souvenir}". ` : "") +
-        `Respire. Tu es exactement là où tu dois être. ` +
-        `(${voiceTone})`;
+      const res = await fetch("/api/murmure", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    prenom,
+    theme,
+    sous_theme: sous,
+    lieu,
+    souvenir,
+    langue: bijou.langue, // "fr" | "en"
+    voix: perso.voix,     // "masculin" | "feminin"
+  }),
+});
 
-      const en =
-        `✨ ${prenom}, a whisper inspired by ${theme}${sous ? " / " + sous : ""}. ` +
-        (lieu ? `I find you in this place: ${lieu}. ` : "") +
-        (souvenir ? `And I keep this memory: "${souvenir}". ` : "") +
-        `Breathe. You are exactly where you need to be. ` +
-        `(${voiceTone})`;
+if (!res.ok) {
+  const err = await res.json().catch(() => ({}));
+  throw new Error(err?.error || "Erreur génération texte");
+}
 
-      setMessage((bijou.langue === "en" ? en : fr).trim());
+const data = await res.json();
+setMessage(String(data.text || "").trim());
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Erreur lors de la génération.";
       setError(message);

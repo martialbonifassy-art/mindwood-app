@@ -266,7 +266,7 @@ export async function POST(req: Request) {
       model,
       voice: openaiVoice as "onyx" | "shimmer" | "alloy" | "echo" | "fable" | "nova" | "sage",
       input: shaped,
-      format: "mp3",
+      response_format: "mp3",
     });
 
     const arrayBuffer = await ttsRes.arrayBuffer();
