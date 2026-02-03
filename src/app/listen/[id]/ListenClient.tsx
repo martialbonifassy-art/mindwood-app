@@ -333,11 +333,6 @@ export default function ListenClient() {
       const lieu = cleanText(p?.lieu);
       const souvenir = cleanText(p?.souvenir);
 
-      const voiceTone =
-        p?.voix === "masculin"
-          ? "Tonalité posée, profonde, protectrice."
-          : "Tonalité douce, enveloppante, lumineuse.";
-
       const res = await fetch("/api/murmure", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
