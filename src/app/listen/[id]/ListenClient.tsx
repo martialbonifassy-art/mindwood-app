@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+
+type TTSResponse = {
+  url: string;
+  voiceProfile?: string; // interne (on ne l'affiche pas)
+  playbackRate?: number;
+  fadeInMs?: number;
+  fadeOutMs?: number;
+};
 
 type BijouRow = {
   id_bijou: string;
@@ -37,24 +45,23 @@ export default function ListenClient() {
   const [message, setMessage] = useState<string>("");
   const [typed, setTyped] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-
-  // pour relancer l’animation "fade-in" à chaque nouveau message
   const [messageKey, setMessageKey] = useState(0);
 
-  // Audio (mp3 via API TTS)
-  const [speaking, setSpeaking] = useState(false);
+  // Audio states
+  const [audioLoading, setAudioLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fadeTimerRef = useRef<number | null>(null);
 
-  const credits = bijou?.credits_restants ?? null;
-  const isActive = bijou?.actif ?? null;
+  // preset from API
+  const playbackRateRef = useRef<number>(1.0);
+  const fadeInRef = useRef<number>(300);
+  const fadeOutRef = useRef<number>(600);
 
-  const canUse = useMemo(() => {
-    if (!bijou) return false;
-    return Boolean(bijou.actif) && Number(bijou.credits_restants) > 0;
-  }, [bijou]);
-
-  const silentLoad = useCallback(async () => {
+  // ===== silentLoad: charger bijou/perso au montage =====
+  const silentLoad = React.useCallback(async function silentLoad() {
     setError(null);
     try {
       const { data: b, error: bErr } = await supabase
@@ -82,16 +89,13 @@ export default function ListenClient() {
     }
   }, [id_bijou]);
 
-  // Charge silencieusement au montage
   useEffect(() => {
     if (!id_bijou) return;
     void silentLoad();
   }, [id_bijou, silentLoad]);
 
-  // Typewriter : dès que `message` change
+  // ===== Typewriter effect =====
   useEffect(() => {
-    stopAudio();
-
     if (!message) {
       setTyped("");
       return;
@@ -102,7 +106,7 @@ export default function ListenClient() {
     let i = 0;
     setTyped("");
 
-    const speed = 14; // ms / caractère
+    const speed = 14;
     const timer = window.setInterval(() => {
       i += 1;
       setTyped(message.slice(0, i));
@@ -112,64 +116,193 @@ export default function ListenClient() {
     return () => window.clearInterval(timer);
   }, [message]);
 
-  // Stop audio si on quitte la page
   useEffect(() => {
-    return () => stopAudio();
+    return () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+    };
   }, []);
 
-  async function fetchBijou() {
-    const { data: b, error: bErr } = await supabase
-      .from("bijoux")
-      .select("id_bijou,type_bijou,langue,credits_restants,actif")
-      .eq("id_bijou", id_bijou)
-      .maybeSingle();
-
-    if (bErr) {
-      setError(bErr.message);
-      return null;
+  // ===== Audio helpers =====
+  function clearFadeTimer() {
+    if (fadeTimerRef.current) {
+      window.clearInterval(fadeTimerRef.current);
+      fadeTimerRef.current = null;
     }
-    if (b) setBijou(b as BijouRow);
-    return (b as BijouRow) ?? null;
   }
 
-  function stopAudio() {
-    try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+  function fadeVolume(audio: HTMLAudioElement, from: number, to: number, ms: number) {
+    clearFadeTimer();
+    if (ms <= 0) {
+      audio.volume = to;
+      return;
+    }
+    const steps = 20;
+    const stepMs = Math.max(10, Math.floor(ms / steps));
+    let i = 0;
+    audio.volume = from;
+
+    fadeTimerRef.current = window.setInterval(() => {
+      i += 1;
+      const p = i / steps;
+      audio.volume = from + (to - from) * p;
+      if (i >= steps) {
+        clearFadeTimer();
+        audio.volume = to;
       }
-    } catch {}
-    setSpeaking(false);
+    }, stepMs);
   }
 
+  async function ensureAudioUrl(): Promise<string> {
+    if (audioUrl) return audioUrl;
+
+    setAudioLoading(true);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: message,
+          lang: bijou?.langue ?? "fr",
+          voice: perso?.voix ?? "feminin",
+          meta: {
+            theme: perso?.theme,
+            subtheme: perso?.sous_theme,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Erreur TTS");
+      }
+
+      const data = (await res.json()) as TTSResponse;
+
+      playbackRateRef.current = typeof data.playbackRate === "number" ? data.playbackRate : 1.0;
+      fadeInRef.current = typeof data.fadeInMs === "number" ? data.fadeInMs : 300;
+      fadeOutRef.current = typeof data.fadeOutMs === "number" ? data.fadeOutMs : 600;
+
+      setAudioUrl(data.url);
+      return data.url;
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
+  async function playAudio() {
+    const url = await ensureAudioUrl();
+
+    let audio = audioRef.current;
+    if (!audio) {
+      audio = new Audio(url);
+      audioRef.current = audio;
+    } else {
+      if (audio.src !== url) {
+        stopAudio(true);
+        audio = new Audio(url);
+        audioRef.current = audio;
+      }
+    }
+
+    audio.playbackRate = playbackRateRef.current;
+
+    try {
+      audio.load();
+    } catch {}
+
+    audio.volume = 0;
+    const p = audio.play();
+    if (p && typeof p.then === "function") await p;
+
+    fadeVolume(audio, 0, 1, fadeInRef.current);
+
+    setIsPlaying(true);
+
+    audio.onended = () => {
+      setIsPlaying(false);
+    };
+    audio.onerror = () => {
+      setIsPlaying(false);
+    };
+  }
+
+  function stopAudio(immediate = false) {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const finalize = () => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+      setIsPlaying(false);
+    };
+
+    if (immediate) {
+      clearFadeTimer();
+      finalize();
+      return;
+    }
+
+    const currentVol = typeof audio.volume === "number" ? audio.volume : 1;
+    fadeVolume(audio, currentVol, 0, fadeOutRef.current);
+
+    window.setTimeout(() => {
+      clearFadeTimer();
+      finalize();
+    }, fadeOutRef.current + 30);
+  }
+
+  async function toggleAudio() {
+    if (audioLoading) return;
+
+    if (isPlaying) {
+      stopAudio(false);
+      return;
+    }
+
+    try {
+      await playAudio();
+    } catch (e) {
+      stopAudio(true);
+      console.error(e);
+    }
+  }
+
+  // ===== discoverMessage: generar mensaje =====
   async function discoverMessage() {
     if (!id_bijou) {
-      setError("ID bijou manquant dans l’URL.");
+      setError("ID bijou manquant dans l'URL.");
       return;
     }
 
     setError(null);
 
-    // si pas chargé => on charge
     if (!bijou || !perso) {
       await silentLoad();
     }
 
-    const b = bijou ?? (await fetchBijou());
-    if (!b) return;
-
-    if (!b.actif) {
-      setError("Ce bijou n’est pas actif.");
+    if (!bijou) {
+      setError("Bijou non trouvé.");
       return;
     }
-    if (b.credits_restants <= 0) {
+
+    if (!bijou.actif) {
+      setError("Ce bijou n'est pas actif.");
+      return;
+    }
+    if (bijou.credits_restants <= 0) {
       setError("Crédits épuisés. Recharge nécessaire.");
       return;
     }
 
     setLoading(true);
     try {
-      // consommer 1 crédit
       const { data: rpcData, error: rpcErr } = await supabase.rpc("consume_credit", {
         p_id_bijou: id_bijou,
       });
@@ -191,10 +324,8 @@ export default function ListenClient() {
         prev ? { ...prev, credits_restants: Number(newCredits ?? prev.credits_restants) } : prev
       );
 
-      // nouveau message => on invalide l'audio précédent
       setAudioUrl(null);
 
-      // message placeholder (OpenAI après)
       const p = perso;
       const prenom = cleanText(p?.prenom) || "toi";
       const theme = cleanText(p?.theme) || "un joli thème";
@@ -210,18 +341,18 @@ export default function ListenClient() {
       const fr =
         `✨ ${prenom}, un murmure inspiré par ${theme}${sous ? " / " + sous : ""}. ` +
         (lieu ? `Je te retrouve dans ce lieu : ${lieu}. ` : "") +
-        (souvenir ? `Et je garde ce souvenir : “${souvenir}”. ` : "") +
+        (souvenir ? `Et je garde ce souvenir : "${souvenir}". ` : "") +
         `Respire. Tu es exactement là où tu dois être. ` +
         `(${voiceTone})`;
 
       const en =
         `✨ ${prenom}, a whisper inspired by ${theme}${sous ? " / " + sous : ""}. ` +
         (lieu ? `I find you in this place: ${lieu}. ` : "") +
-        (souvenir ? `And I keep this memory: “${souvenir}”. ` : "") +
+        (souvenir ? `And I keep this memory: "${souvenir}". ` : "") +
         `Breathe. You are exactly where you need to be. ` +
         `(${voiceTone})`;
 
-      setMessage((b.langue === "en" ? en : fr).trim());
+      setMessage((bijou.langue === "en" ? en : fr).trim());
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Erreur lors de la génération.";
       setError(message);
@@ -230,74 +361,11 @@ export default function ListenClient() {
     }
   }
 
-  async function toggleAudio() {
-    // on lit le message COMPLET, pas "typed" (sinon ça coupe si typewriter en cours)
-    if (!message) return;
-
-    // stop si en lecture
-    if (audioRef.current && !audioRef.current.paused) {
-      stopAudio();
-      return;
-    }
-
-    setError(null);
-
-    // si on a déjà une url audio => play direct
-    if (audioUrl && audioRef.current) {
-      try {
-        await audioRef.current.play();
-        setSpeaking(true);
-        audioRef.current.onended = () => setSpeaking(false);
-        return;
-      } catch {
-        setSpeaking(false);
-        setError("Impossible de lancer l’audio.");
-        return;
-      }
-    }
-
-    // sinon : on appelle /api/tts
-    try {
-      setSpeaking(true);
-
-      const voice = typeof perso?.voix === "string" ? perso.voix : "feminin";
-
-      const r = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: message,
-          voice,
-          lang: bijou?.langue ?? "fr",
-        }),
-      });
-
-      if (!r.ok) {
-        const j = await r.json().catch(() => null);
-        throw new Error(j?.error ?? "TTS indisponible.");
-      }
-
-      const { url } = await r.json();
-      if (!url) throw new Error("TTS indisponible.");
-
-      setAudioUrl(url);
-
-      requestAnimationFrame(async () => {
-        if (!audioRef.current) return;
-        try {
-          await audioRef.current.play();
-          audioRef.current.onended = () => setSpeaking(false);
-        } catch {
-          setSpeaking(false);
-          setError("Impossible de lancer l’audio.");
-        }
-      });
-    } catch (error: unknown) {
-      setSpeaking(false);
-      const message = error instanceof Error ? error.message : "Erreur audio.";
-      setError(message);
-    }
-  }
+  // ===== UI minimale =====
+  const buttonLabel = audioLoading ? "Génération…" : isPlaying ? "Stop audio" : "Audio";
+  const credits = bijou?.credits_restants ?? null;
+  const isActive = bijou?.actif ?? null;
+  const canUse = bijou ? Boolean(bijou.actif) && Number(bijou.credits_restants) > 0 : false;
 
   return (
     <main style={S.page}>
@@ -477,7 +545,7 @@ export default function ListenClient() {
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
                   <div style={S.placeholderTitle} className="mw-placeholderTitle">
-                    Un murmure t’attend.
+                    Un murmure t&apos;attend.
                   </div>
                   <div style={S.placeholderText} className="mw-placeholderText">
                     Appuie sur <b>Découvrir</b> pour recevoir ton message.
@@ -490,12 +558,12 @@ export default function ListenClient() {
           <div style={S.actions} className="mw-actions">
             <button
               onClick={discoverMessage}
-              disabled={loading || (bijou ? !canUse : false)}
+              disabled={loading || !canUse}
               className="mw-btnCopper"
               style={{
                 ...S.btnCopper,
-                opacity: loading || (bijou ? !canUse : false) ? 0.65 : 1,
-                cursor: loading || (bijou ? !canUse : false) ? "not-allowed" : "pointer",
+                opacity: loading || !canUse ? 0.65 : 1,
+                cursor: loading || !canUse ? "not-allowed" : "pointer",
               }}
             >
               <span style={{ position: "relative" }}>{loading ? "Création…" : "Découvrir"}</span>
@@ -503,16 +571,16 @@ export default function ListenClient() {
 
             <button
               onClick={toggleAudio}
-              disabled={!typed}
+              disabled={!typed || audioLoading}
               className="mw-btnGhost"
               style={{
                 ...S.btnGhost,
-                opacity: typed ? 1 : 0.55,
-                cursor: typed ? "pointer" : "not-allowed",
+                opacity: typed && !audioLoading ? 1 : 0.55,
+                cursor: typed && !audioLoading ? "pointer" : "not-allowed",
               }}
               title="Lecture audio (mp3 via /api/tts)"
             >
-              {speaking ? "Stop audio" : "Audio"}
+              {buttonLabel}
             </button>
           </div>
 
@@ -528,7 +596,7 @@ export default function ListenClient() {
   );
 }
 
-/** CSS premium ULTRA LUXE (inchangé) */
+/** CSS premium ULTRA LUXE */
 function PremiumCss() {
   useEffect(() => {
     if (document.getElementById("mw-premium-css")) return;
@@ -730,7 +798,6 @@ function PremiumCss() {
   return null;
 }
 
-/* ⚠️ DESIGN : S inchangé (copié tel quel de ton fichier) */
 const S: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
