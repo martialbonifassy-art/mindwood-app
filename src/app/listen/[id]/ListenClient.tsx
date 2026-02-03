@@ -34,6 +34,18 @@ function cleanText(v: unknown) {
   return s.length ? s : "";
 }
 
+function safeLang(v: unknown): "fr" | "en" {
+  const s = String(v ?? "").toLowerCase();
+  return s.startsWith("en") ? "en" : "fr";
+}
+
+function toTtsGender(voix: unknown): "male" | "female" | "neutral" {
+  const s = String(voix ?? "").toLowerCase();
+  if (s.includes("masc")) return "male";
+  if (s.includes("fem")) return "female";
+  return "neutral";
+}
+
 export default function ListenClient() {
   const params = useParams<{ id: string }>();
   const id_bijou = params?.id;
@@ -160,6 +172,13 @@ export default function ListenClient() {
   async function ensureAudioUrl(): Promise<string> {
     if (audioUrl) return audioUrl;
 
+    const lang = safeLang(bijou?.langue);
+    const gender = toTtsGender(perso?.voix);
+
+    if (!message.trim()) {
+      throw new Error("Message vide : clique sur « Découvrir » avant l'audio.");
+    }
+
     setAudioLoading(true);
     try {
       const res = await fetch("/api/tts", {
@@ -167,8 +186,8 @@ export default function ListenClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: message,
-          lang: bijou?.langue ?? "fr",
-          voice: perso?.voix ?? "feminin",
+          lang,
+          voice: gender,
           meta: {
             theme: perso?.theme,
             subtheme: perso?.sous_theme,
@@ -197,16 +216,11 @@ export default function ListenClient() {
   async function playAudio() {
     const url = await ensureAudioUrl();
 
-    let audio = audioRef.current;
-    if (!audio) {
-      audio = new Audio(url);
-      audioRef.current = audio;
-    } else {
-      if (audio.src !== url) {
-        stopAudio(true);
-        audio = new Audio(url);
-        audioRef.current = audio;
-      }
+    const audio = audioRef.current;
+    if (!audio) throw new Error("Audio element manquant.");
+
+    if (audio.src !== url) {
+      audio.src = url;
     }
 
     audio.playbackRate = playbackRateRef.current;
@@ -223,12 +237,8 @@ export default function ListenClient() {
 
     setIsPlaying(true);
 
-    audio.onended = () => {
-      setIsPlaying(false);
-    };
-    audio.onerror = () => {
-      setIsPlaying(false);
-    };
+    audio.onended = () => setIsPlaying(false);
+    audio.onerror = () => setIsPlaying(false);
   }
 
   function stopAudio(immediate = false) {
@@ -325,6 +335,12 @@ export default function ListenClient() {
       );
 
       setAudioUrl(null);
+      stopAudio(true);
+
+      if (!perso) {
+        setError("Personnalisation manquante.");
+        return;
+      }
 
       const p = perso;
       const prenom = cleanText(p?.prenom) || "toi";

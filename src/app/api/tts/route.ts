@@ -46,6 +46,8 @@ function sha1(input: string) {
   return crypto.createHash("sha1").update(input).digest("hex");
 }
 
+const CACHE_VERSION = "v2";
+
 function norm(s?: string | null) {
   return (s || "").trim().toLowerCase();
 }
@@ -238,7 +240,7 @@ export async function POST(req: Request) {
 
     // 4) Cache key (inclut shaped + voice + model)
     const model = "gpt-4o-mini-tts";
-    const cacheKey = sha1(`${model}|${openaiVoice}|${lang}|${profile}|${shaped}`);
+    const cacheKey = sha1(`${CACHE_VERSION}|${model}|${openaiVoice}|${lang}|${profile}|${shaped}`);
 
     const objectPath = `${lang}/${profile}/${cacheKey}.mp3`;
 
