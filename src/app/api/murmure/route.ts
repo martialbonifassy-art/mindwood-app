@@ -354,7 +354,9 @@ export async function POST(req: Request) {
     const voix = normalizeVoice(body.voix || "feminin");
 
     const intent = inferIntent(theme, sous_theme);
-    const seed = `${langue}::${voix}::${prenom}::${theme}::${sous_theme}::${lieu}::${souvenir}`;
+    // Add timestamp to seed so each request gets a different message
+    const timestamp = Math.floor(Date.now() / 1000); // seconds
+    const seed = `${langue}::${voix}::${prenom}::${theme}::${sous_theme}::${lieu}::${souvenir}::${timestamp}`;
 
     const text = langue === "en" ? buildEn({ prenom, lieu, souvenir, intent, voice: voix as any, seed }) : buildFr({ prenom, lieu, souvenir, intent, voice: voix as any, seed });
 
