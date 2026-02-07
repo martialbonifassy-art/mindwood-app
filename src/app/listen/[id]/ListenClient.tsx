@@ -172,15 +172,35 @@ export default function ListenClient() {
   async function ensureAudioUrl(): Promise<string> {
     if (audioUrl) return audioUrl;
 
-    const lang = safeLang(bijou?.langue);
-    const gender = toTtsGender(perso?.voix);
-
     if (!message.trim()) {
       throw new Error("Message vide : clique sur « Découvrir » avant l'audio.");
     }
 
     setAudioLoading(true);
     try {
+      // Si c'est une voix enregistrée, récupérer l'URL de la voix
+      if (bijou?.type_bijou === "voix_enregistree" || bijou?.type_bijou === "voix_enregistrée") {
+        const { data, error: err } = await supabase
+          .from("voix_enregistrees")
+          .select("audio_url")
+          .eq("id_bijou", bijou.id_bijou)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (err || !data) {
+          throw new Error("Voix enregistrée non trouvée");
+        }
+
+        setAudioUrl(data.audio_url);
+        // Pas de preset pour voix enregistrée : garder les defaults
+        return data.audio_url;
+      }
+
+      // Sinon, générer avec TTS (murmures_IA)
+      const lang = safeLang(bijou?.langue);
+      const gender = toTtsGender(perso?.voix);
+
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -397,33 +417,49 @@ setMessage(newMessage);
 // Générer l'audio automatiquement après le message
 setAudioLoading(true);
 try {
-  const lang = safeLang(bijou?.langue);
-  const gender = toTtsGender(perso?.voix);
-  
-  const ttsRes = await fetch("/api/tts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: newMessage,
-      lang,
-      voice: gender,
-      meta: {
-        theme: perso?.theme,
-        subtheme: perso?.sous_theme,
-      },
-    }),
-  });
+  // Si c'est une voix enregistrée, récupérer l'URL de la voix
+  if (bijou?.type_bijou === "voix_enregistree" || bijou?.type_bijou === "voix_enregistrée") {
+    const { data: voixData, error: voixErr } = await supabase
+      .from("voix_enregistrees")
+      .select("audio_url")
+      .eq("id_bijou", bijou.id_bijou)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
 
-  if (!ttsRes.ok) {
-    const err = await ttsRes.json().catch(() => ({}));
-    throw new Error(err?.error || "Erreur TTS");
+    if (!voixErr && voixData) {
+      setAudioUrl(voixData.audio_url);
+    }
+  } else {
+    // Sinon générer avec TTS (murmures_IA)
+    const lang = safeLang(bijou?.langue);
+    const gender = toTtsGender(perso?.voix);
+    
+    const ttsRes = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: newMessage,
+        lang,
+        voice: gender,
+        meta: {
+          theme: perso?.theme,
+          subtheme: perso?.sous_theme,
+        },
+      }),
+    });
+
+    if (!ttsRes.ok) {
+      const err = await ttsRes.json().catch(() => ({}));
+      throw new Error(err?.error || "Erreur TTS");
+    }
+
+    const ttsData = (await ttsRes.json()) as TTSResponse;
+    playbackRateRef.current = typeof ttsData.playbackRate === "number" ? ttsData.playbackRate : 1.0;
+    fadeInRef.current = typeof ttsData.fadeInMs === "number" ? ttsData.fadeInMs : 300;
+    fadeOutRef.current = typeof ttsData.fadeOutMs === "number" ? ttsData.fadeOutMs : 600;
+    setAudioUrl(ttsData.url);
   }
-
-  const ttsData = (await ttsRes.json()) as TTSResponse;
-  playbackRateRef.current = typeof ttsData.playbackRate === "number" ? ttsData.playbackRate : 1.0;
-  fadeInRef.current = typeof ttsData.fadeInMs === "number" ? ttsData.fadeInMs : 300;
-  fadeOutRef.current = typeof ttsData.fadeOutMs === "number" ? ttsData.fadeOutMs : 600;
-  setAudioUrl(ttsData.url);
 } catch (ttsError: unknown) {
   console.error("Erreur génération audio:", ttsError);
   // On ne bloque pas : le message est affiché, l'audio peut être régénéré au clic
