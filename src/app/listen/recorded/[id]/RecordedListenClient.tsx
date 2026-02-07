@@ -203,7 +203,7 @@ export default function RecordedListenClient() {
         <div className="text-white text-center max-w-md px-4">
           <div className="mb-6 text-5xl">❌</div>
           <h1 className="text-2xl font-bold mb-4">{locale === "fr" ? "Message non trouvé" : "Message not found"}</h1>
-          <p className="text-slate-300 mb-6">{error || (locale === "fr" ? "Aucun message enregistré pour ce bijou." : "No recorded message for this jewelry.")}</p>
+          <p className="text-slate-300 mb-6">{locale === "fr" ? "Voix enregistrée non trouvée" : "Recorded voice not found"}</p>
           <button
             onClick={() => router.push("/")}
             className="px-6 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition font-medium"
