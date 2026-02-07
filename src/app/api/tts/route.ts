@@ -96,17 +96,17 @@ function pickVoiceProfile(meta?: TTSMeta): VoiceProfile {
 function profilePreset(profile: VoiceProfile) {
   switch (profile) {
     case "murmure_intime":
-      return { playbackRate: 0.92, fadeInMs: 350, fadeOutMs: 550 };
+      return { playbackRate: 0.90, fadeInMs: 350, fadeOutMs: 550 }; // un peu plus lent pour intimité
     case "souffle_meditatif":
-      return { playbackRate: 0.88, fadeInMs: 500, fadeOutMs: 800 };
+      return { playbackRate: 0.85, fadeInMs: 500, fadeOutMs: 800 }; // très lent, méditatif
     case "presence_charnelle":
-      return { playbackRate: 0.97, fadeInMs: 250, fadeOutMs: 450 };
+      return { playbackRate: 0.98, fadeInMs: 250, fadeOutMs: 450 }; // quasi normal, naturel
     case "rituel_ancien":
-      return { playbackRate: 0.90, fadeInMs: 450, fadeOutMs: 900 };
+      return { playbackRate: 0.88, fadeInMs: 450, fadeOutMs: 900 }; // lent, solennel
     case "voix_complice":
-      return { playbackRate: 1.0, fadeInMs: 220, fadeOutMs: 420 };
+      return { playbackRate: 1.0, fadeInMs: 220, fadeOutMs: 420 }; // normal, conversationnel
     case "echo_lointain":
-      return { playbackRate: 0.86, fadeInMs: 700, fadeOutMs: 1200 };
+      return { playbackRate: 0.84, fadeInMs: 700, fadeOutMs: 1200 }; // très lent, écho
   }
 }
 
@@ -125,9 +125,9 @@ function shapeText(input: string, lang: Lang, profile: VoiceProfile) {
 
   // selon profil: on ajoute des respirations
   const addBreath = (s: string) => {
-    // Ajoute des micro-pauses après ponctuation, sans casser le sens
+    // Ajoute des micro-pauses subtiles après ponctuation pour plus de naturel
     return s
-      .replace(/([,;:])\s+/g, "$1 … ")
+      .replace(/([,;:])\s+/g, "$1 ")
       .replace(/([.!?])\s+/g, "$1\n"); // pause nette en fin de phrase
   };
 
@@ -263,12 +263,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7) Appel OpenAI TTS
+    // 7) Appel OpenAI TTS avec paramètres pour plus d'humanité
+    // Nous utilisons une vitesse légèrement ralentie et un format qui préserve les nuances vocales
     const ttsRes = await openai.audio.speech.create({
       model,
       voice: openaiVoice as "onyx" | "shimmer" | "alloy" | "echo" | "fable" | "nova" | "sage",
       input: shaped,
       response_format: "mp3",
+      speed: 0.95, // légèrement plus lent pour plus de naturel
     });
 
     const arrayBuffer = await ttsRes.arrayBuffer();

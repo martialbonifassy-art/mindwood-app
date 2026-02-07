@@ -36,18 +36,20 @@ async function generateMessage(params: {
 
   const systemPrompt =
     langue === "en"
-      ? `You are a poetic and wise message creator. Generate a short, elegant, personal message (5-7 sentences) that suggests meaning without being literal. The message should be:
-- Poetic and evocative
+      ? `You are a warm and wise message creator. Generate a clear, personal message (5-7 sentences) that is easy to understand and pleasant to listen to. The message should be:
+- Clear and direct, not overly metaphorical
+- Simple vocabulary, accessible to everyone
+- Warm and encouraging tone
 - Never mention the theme/subtheme by name
 - Use "you" to address the person
-- Be authentic and touching
-- 5-7 concise sentences maximum`
-      : `Tu es un créateur de messages poétiques et sages. Génère un message court, élégant et personnel (5-7 phrases) qui suggère le sens sans être littéral. Le message doit :
-- Être poétique et évocateur
+- 5-7 sentences maximum`
+      : `Tu es un créateur de messages chaleureux et sages. Génère un message clair et personnel (5-7 phrases) qui est facile à comprendre et agréable à écouter. Le message doit :
+- Être clair et direct, pas trop métaphorique
+- Utiliser un vocabulaire simple, accessible à tous
+- Avoir un ton chaleureux et encourageant
 - Ne jamais citer le thème/sous-thème par leur nom
 - Utiliser le tutoiement
-- Être authentique et touchant
-- 5-7 phrases concises maximum`;
+- 5-7 phrases maximum`;
 
   const userPrompt =
     langue === "en"
@@ -57,14 +59,14 @@ Subtheme (do not mention explicitly): ${sous_theme}
 ${lieu ? `Place of significance: ${lieu}` : ""}
 ${souvenir ? `Memory context: ${souvenir}` : ""}
 
-Generate an elegant, poetic message that captures the essence of these themes without naming them directly. Start with "${prenom},"`
+Generate a clear, warm message that speaks directly to their situation. Use simple words and short sentences. Be encouraging and genuine. Start with "${prenom},"`
       : `Crée un message personnel pour ${prenom}.
 Contexte thématique (ne pas mentionner explicitement) : ${theme}
 Sous-thème (ne pas mentionner explicitement) : ${sous_theme}
 ${lieu ? `Lieu significatif : ${lieu}` : ""}
 ${souvenir ? `Contexte de souvenir : ${souvenir}` : ""}
 
-Génère un message élégant et poétique qui capture l'essence de ces thèmes sans les nommer directement. Commence par "${prenom},"`;
+Génère un message clair et chaleureux qui parle directement à sa situation. Utilise des mots simples et des phrases courtes. Sois encourageant et authentique. Commence par "${prenom},"`;
 
   try {
     const completion = await openai.chat.completions.create({
