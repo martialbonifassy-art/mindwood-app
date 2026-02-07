@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { getLocaleFromHost, useTranslations } from "@/lib/i18n";
 
 type PageProps = {
   params: { id: string };
@@ -13,6 +14,13 @@ export default function RechargeSuccessPage({ params }: PageProps) {
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+
+  // Detect locale from hostname
+  const [locale, setLocale] = useState<"fr" | "en">("fr");
+  useEffect(() => {
+    setLocale(getLocaleFromHost(window.location.hostname));
+  }, []);
+  const t = useTranslations(locale);
 
   useEffect(() => {
     const confirm = async () => {
@@ -48,14 +56,14 @@ export default function RechargeSuccessPage({ params }: PageProps) {
     <main className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-6">
       <div className="max-w-lg w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-8 text-center">
         <div className="text-4xl mb-4">✨</div>
-        <h1 className="text-2xl font-semibold mb-3">Merci, c’est enregistré</h1>
+        <h1 className="text-2xl font-semibold mb-3">{t.success.title}</h1>
         <p className="text-slate-300 mb-6">
-          Le bijou peut à nouveau être scanné pour écouter le message.
+          {t.success.message}
           <br />
-          Si tu veux, tu peux y retourner maintenant.
+          {t.success.subtitle}
         </p>
         {status === "loading" && (
-          <div className="text-slate-400 text-sm mb-4">Vérification du paiement...</div>
+          <div className="text-slate-400 text-sm mb-4">{locale === "fr" ? "Vérification du paiement..." : "Verifying payment..."}</div>
         )}
         {status === "error" && (
           <div className="text-red-400 text-sm mb-4">{error}</div>

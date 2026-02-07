@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getLocaleFromHost, useTranslations } from "@/lib/i18n";
 
 type VoixEnregistree = {
   id: string;
@@ -22,6 +23,13 @@ export default function RecordedListenClient() {
   const params = useParams();
   const router = useRouter();
   const id_bijou = params?.id as string;
+
+  // Detect locale from hostname
+  const [locale, setLocale] = useState<"fr" | "en">("fr");
+  useEffect(() => {
+    setLocale(getLocaleFromHost(window.location.hostname));
+  }, []);
+  const t = useTranslations(locale);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [loading, setLoading] = useState(true);
@@ -183,7 +191,7 @@ export default function RecordedListenClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-pink-500 mx-auto mb-4"></div>
-          <p>Chargement du message...</p>
+          <p>{t.common.loading}</p>
         </div>
       </div>
     );
@@ -194,13 +202,13 @@ export default function RecordedListenClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-center max-w-md px-4">
           <div className="mb-6 text-5xl">❌</div>
-          <h1 className="text-2xl font-bold mb-4">Message non trouvé</h1>
-          <p className="text-slate-300 mb-6">{error || "Aucun message enregistré pour ce bijou."}</p>
+          <h1 className="text-2xl font-bold mb-4">{locale === "fr" ? "Message non trouvé" : "Message not found"}</h1>
+          <p className="text-slate-300 mb-6">{error || (locale === "fr" ? "Aucun message enregistré pour ce bijou." : "No recorded message for this jewelry.")}</p>
           <button
             onClick={() => router.push("/")}
             className="px-6 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition font-medium"
           >
-            Retour à l'accueil
+            {locale === "fr" ? "Retour à l'accueil" : "Back to home"}
           </button>
         </div>
       </div>
@@ -253,9 +261,13 @@ export default function RecordedListenClient() {
             ✨ Mindwood
           </div>
           <h1 className="text-5xl sm:text-6xl font-light mt-8 mb-4 text-white drop-shadow-lg">
-            Un message<br />t'attend
+            {locale === "fr" ? (
+              <>Un message<br />t'attend</>
+            ) : (
+              <>A message<br />awaits you</>
+            )}
           </h1>
-          <p className="text-lg text-white/70 font-light">Quelque chose de précieux t'a été confié.</p>
+          <p className="text-lg text-white/70 font-light">{locale === "fr" ? "Quelque chose de précieux t'a été confié." : "Something precious has been entrusted to you."}</p>
         </div>
 
         <div className="w-full max-w-2xl">
@@ -278,7 +290,7 @@ export default function RecordedListenClient() {
               onClick={togglePlay}
               className="w-full mb-8 px-8 py-5 rounded-full text-white font-semibold text-lg transition-all transform hover:scale-105 active:scale-95 bg-linear-to-r from-amber-400 via-rose-400 to-sky-400 shadow-lg hover:shadow-xl"
             >
-              {isPlaying ? "⏸ Pause" : "▶ Écouter le message"}
+              {isPlaying ? t.listen.pause : t.listen.play}
             </button>
 
             {duration > 0 && (
@@ -309,11 +321,11 @@ export default function RecordedListenClient() {
 
             <div className="space-y-2 text-sm text-white/70 font-light">
               <div className="flex items-center justify-between">
-                <span>Enregistré le {new Date(voix.created_at).toLocaleDateString("fr-FR")}</span>
-                <span className="text-white/90">{voix.lectures_restantes} écoute{voix.lectures_restantes !== 1 ? "s" : ""}</span>
+                <span>{locale === "fr" ? "Enregistré le" : "Recorded on"} {new Date(voix.created_at).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US")}</span>
+                <span className="text-white/90">{t.listen.listensRemaining(voix.lectures_restantes)}</span>
               </div>
               {voix.is_locked && (
-                <div className="text-amber-200/90 text-xs pt-2">🔒 Message verrouillé et sécurisé</div>
+                <div className="text-amber-200/90 text-xs pt-2">🔒 {locale === "fr" ? "Message verrouillé et sécurisé" : "Message locked and secured"}</div>
               )}
             </div>
 

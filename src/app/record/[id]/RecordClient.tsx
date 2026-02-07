@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import AudioRecorder from "@/components/AudioRecorder";
+import { getLocaleFromHost, useTranslations } from "@/lib/i18n";
 
 type RecordConfig = {
   session: {
@@ -36,6 +37,13 @@ export default function RecordClient() {
   const params = useParams();
   const router = useRouter();
   const id_bijou = params?.id as string;
+
+  // Detect locale from hostname
+  const [locale, setLocale] = useState<"fr" | "en">("fr");
+  useEffect(() => {
+    setLocale(getLocaleFromHost(window.location.hostname));
+  }, []);
+  const t = useTranslations(locale);
 
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<RecordConfig | null>(null);
@@ -265,7 +273,7 @@ export default function RecordClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-pink-500 mx-auto mb-4"></div>
-          <p>Chargement...</p>
+          <p>{t.common.loading}</p>
         </div>
       </div>
     );
@@ -275,12 +283,12 @@ export default function RecordClient() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-center">
-          <p className="text-red-400">{error || "Bijou non trouvé"}</p>
+          <p className="text-red-400">{error || t.common.error}</p>
           <button
             onClick={() => router.back()}
             className="mt-4 px-4 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition"
           >
-            Retour
+            {locale === "fr" ? "Retour" : "Back"}
           </button>
         </div>
       </div>
@@ -293,19 +301,18 @@ export default function RecordClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center text-white max-w-md px-4">
           <div className="mb-6 text-5xl">🔒</div>
-          <h1 className="text-2xl font-bold mb-4">Enregistrement verrouillé</h1>
+          <h1 className="text-2xl font-bold mb-4">{t.record.locked}</h1>
           <p className="text-slate-300 mb-6">
-            Votre message pour <strong>{bijou.prenom || "le destinataire"}</strong> a
-            été enregistré et est maintenant verrouillé définitivement.
+            {t.record.lockedMessage}
           </p>
           <p className="text-sm text-slate-400 mb-6">
-            Vous ne pouvez plus le modifier. Le destinataire peut l'écouter à tout moment.
+            {locale === "fr" ? "Vous ne pouvez plus le modifier. Le destinataire peut l'écouter à tout moment." : "You cannot modify it anymore. The recipient can listen to it anytime."}
           </p>
           <button
             onClick={() => router.push(`/listen/recorded/${id_bijou}`)}
             className="px-6 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition font-medium"
           >
-            Écouter le message
+            {locale === "fr" ? "Écouter le message" : "Listen to message"}
           </button>
         </div>
       </div>
@@ -319,15 +326,15 @@ export default function RecordClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center text-white max-w-md px-4">
           <div className="mb-6 text-5xl">❌</div>
-          <h1 className="text-2xl font-bold mb-4">Plus d'essais disponibles</h1>
+          <h1 className="text-2xl font-bold mb-4">{locale === "fr" ? "Plus d'essais disponibles" : "No attempts left"}</h1>
           <p className="text-slate-300 mb-6">
-            Vous avez utilisé tous vos essais d'enregistrement.
+            {locale === "fr" ? "Vous avez utilisé tous vos essais d'enregistrement." : "You have used all your recording attempts."}
           </p>
           <button
             onClick={() => router.push(`/listen/${id_bijou}`)}
             className="px-6 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition font-medium"
           >
-            Retourner
+            {locale === "fr" ? "Retourner" : "Back"}
           </button>
         </div>
       </div>
@@ -339,18 +346,23 @@ export default function RecordClient() {
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center text-white max-w-md px-4">
           <div className="mb-6 text-5xl">✨</div>
-          <h1 className="text-2xl font-bold mb-4">Message enregistré!</h1>
+          <h1 className="text-2xl font-bold mb-4">{t.record.validationSuccess}</h1>
           <p className="text-slate-300 mb-8">
-            Votre message pour <strong>{bijou.prenom || "le destinataire"}</strong> est
-            sauvegardé et verrouillé définitivement.
+            {locale === "fr" 
+              ? `Votre message pour ${bijou.prenom || "le destinataire"} est sauvegardé et verrouillé définitivement.`
+              : `Your message for ${bijou.prenom || "the recipient"} is saved and permanently locked.`
+            }
           </p>
           
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-6">
             <p className="text-sm text-slate-300 mb-3">
-              ✓ Le destinataire peut écouter en scannant la puce du bijou
+              {locale === "fr" 
+                ? "✓ Le destinataire peut écouter en scannant la puce du bijou"
+                : "✓ The recipient can listen by scanning the jewelry chip"
+              }
             </p>
             <p className="text-xs text-slate-400">
-              Redirection automatique vers la page d'écoute...
+              {t.record.redirecting}
             </p>
           </div>
 
@@ -367,12 +379,12 @@ export default function RecordClient() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 pt-8">
-          <h1 className="text-3xl font-bold mb-2">Enregistrer votre message</h1>
+          <h1 className="text-3xl font-bold mb-2">{t.record.title}</h1>
           <p className="text-slate-300">
-            Pour <span className="font-semibold text-pink-400">{bijou.prenom || bijou.destinataire_prenom || "le destinataire"}</span>
+            {locale === "fr" ? "Pour" : "For"} <span className="font-semibold text-pink-400">{bijou.prenom || bijou.destinataire_prenom || (locale === "fr" ? "le destinataire" : "the recipient")}</span>
           </p>
           <p className="text-sm text-slate-400 mt-2">
-            Essais restants: <span className="font-bold text-pink-400">{essaisRestants}/5</span>
+            {t.record.attemptsRemaining(essaisRestants)}
           </p>
         </div>
 
@@ -394,7 +406,7 @@ export default function RecordClient() {
         {/* Draft Playback */}
         {draftUrl && !uploadSuccess && (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-8">
-            <h3 className="font-semibold mb-4">Aperçu de votre enregistrement</h3>
+            <h3 className="font-semibold mb-4">{locale === "fr" ? "Aperçu de votre enregistrement" : "Preview your recording"}</h3>
             <div className="flex gap-4 items-center">
               <button
                 onClick={handlePlayDraft}
@@ -402,15 +414,15 @@ export default function RecordClient() {
                 className="px-6 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-600 rounded-lg transition font-medium"
               >
                 {draftPlayback?.src === draftUrl && !draftPlayback.paused
-                  ? "⏸ Pause"
-                  : "▶ Écouter"}
+                  ? (locale === "fr" ? "⏸ Pause" : "⏸ Pause")
+                  : (locale === "fr" ? "▶ Écouter" : "▶ Play")}
               </button>
               <button
                 onClick={handleRestart}
                 disabled={isUploading}
                 className="px-6 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 rounded-lg transition font-medium"
               >
-                ↻ Recommencer
+                {locale === "fr" ? "↻ Recommencer" : "↻ Re-record"}
               </button>
             </div>
           </div>
@@ -424,7 +436,7 @@ export default function RecordClient() {
               disabled={isUploading}
               className="flex-1 px-6 py-3 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-600 rounded-lg transition font-bold text-center"
             >
-              {isUploading ? "Sauvegarde..." : "✓ Valider et enregistrer"}
+              {isUploading ? t.record.validating : t.record.validate}
             </button>
           </div>
         )}
@@ -432,13 +444,13 @@ export default function RecordClient() {
         {/* Info */}
         <div className="mt-8 bg-slate-800/30 border border-slate-700 rounded-lg p-4 text-sm text-slate-300">
           <p className="mb-3">
-            💡 <strong>Comment ça marche:</strong>
+            💡 <strong>{locale === "fr" ? "Comment ça marche:" : "How it works:"}</strong>
           </p>
           <ul className="space-y-2 text-xs">
-            <li>✓ Vous avez <strong>{essaisRestants} essai(s)</strong> pour enregistrer</li>
-            <li>✓ Chaque enregistrement <strong>consomme 1 essai</strong></li>
-            <li>✓ Écoutez votre brouillon autant de fois que vous voulez</li>
-            <li>✓ <strong>⚠️ "Valider et enregistrer" = VERROUILLÉ DÉFINITIVEMENT</strong></li>
+            <li>✓ {locale === "fr" ? `Vous avez ${essaisRestants} essai(s) pour enregistrer` : `You have ${essaisRestants} attempt(s) to record`}</li>
+            <li>✓ {locale === "fr" ? "Chaque enregistrement consomme 1 essai" : "Each recording uses 1 attempt"}</li>
+            <li>✓ {locale === "fr" ? "Écoutez votre brouillon autant de fois que vous voulez" : "Listen to your draft as many times as you want"}</li>
+            <li>✓ <strong>⚠️ {locale === "fr" ? "\"Valider et enregistrer\" = VERROUILLÉ DÉFINITIVEMENT" : "\"Validate\" = PERMANENTLY LOCKED"}</strong></li>
             <li>✓ Après validation, vous avez <strong>10 écoutes</strong> avant recharge</li>
           </ul>
         </div>

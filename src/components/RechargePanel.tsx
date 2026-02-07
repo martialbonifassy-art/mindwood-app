@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getLocaleFromHost, useTranslations } from "@/lib/i18n";
 
 type RechargePanelProps = {
   id_bijou: string;
@@ -15,6 +16,13 @@ const CREDIT_PACKAGES = [
 export default function RechargePanel({ id_bijou, currentCredits = 0 }: RechargePanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Detect locale from hostname
+  const [locale, setLocale] = useState<"fr" | "en">("fr");
+  useEffect(() => {
+    setLocale(getLocaleFromHost(window.location.hostname));
+  }, []);
+  const t = useTranslations(locale);
 
   async function handleRecharge(credits: number) {
     if (loading) return;
@@ -51,9 +59,12 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
   return (
     <div style={S.container}>
       <div style={S.header}>
-        <h2 style={S.title}>Recharge de crédits</h2>
+        <h2 style={S.title}>{t.recharge.title}</h2>
         <p style={S.subtitle}>
-          Tu as actuellement <strong>{currentCredits}</strong> message{currentCredits > 1 ? "s" : ""} restant{currentCredits > 1 ? "s" : ""}
+          {locale === "fr" 
+            ? `Tu as actuellement ${currentCredits} message${currentCredits > 1 ? "s" : ""} restant${currentCredits > 1 ? "s" : ""}`
+            : `You currently have ${currentCredits} message${currentCredits > 1 ? "s" : ""} remaining`
+          }
         </p>
       </div>
 
@@ -74,16 +85,16 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
             }}
             className="recharge-package"
           >
-            {pkg.popular && <div style={S.badge}>Le plus populaire</div>}
+            {pkg.popular && <div style={S.badge}>{locale === "fr" ? "Le plus populaire" : "Most popular"}</div>}
             
             <div style={S.packageHeader}>
               <div style={S.creditsAmount}>{pkg.credits}</div>
-              <div style={S.creditsLabel}>messages</div>
+              <div style={S.creditsLabel}>{locale === "fr" ? "messages" : "messages"}</div>
             </div>
 
             <div style={S.priceSection}>
               <div style={S.price}>{pkg.price}€</div>
-              <div style={S.pricePerMessage}>{(pkg.price / pkg.credits).toFixed(2)}€ / message</div>
+              <div style={S.pricePerMessage}>{(pkg.price / pkg.credits).toFixed(2)}€ / {locale === "fr" ? "message" : "message"}</div>
             </div>
 
             <button
@@ -96,7 +107,7 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
               }}
               className="recharge-button"
             >
-              {loading ? "Chargement..." : "Recharger"}
+              {loading ? (locale === "fr" ? "Chargement..." : "Loading...") : t.recharge.buy}
             </button>
           </div>
         ))}
