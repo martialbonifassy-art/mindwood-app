@@ -36,6 +36,11 @@ export async function POST(req: Request) {
 
     const amount = PACKAGES[body.credits as 10 | 20];
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                     process.env.VERCEL_URL 
+                       ? `https://${process.env.VERCEL_URL}`
+                       : 'http://localhost:3000';
+
     // Créer une session Checkout
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -54,8 +59,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/listen/${body.id_bijou}?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/setup/${body.id_bijou}?payment=cancelled`,
+      success_url: `${baseUrl}/listen/${body.id_bijou}?payment=success`,
+      cancel_url: `${baseUrl}/recharge/${body.id_bijou}?payment=cancelled`,
       metadata: {
         id_bijou: body.id_bijou,
         credits: body.credits.toString(),
