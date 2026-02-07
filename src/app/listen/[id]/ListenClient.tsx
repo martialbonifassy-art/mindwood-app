@@ -416,9 +416,13 @@ setMessage(newMessage);
 
 // Générer l'audio automatiquement après le message
 setAudioLoading(true);
+const isVoixEnregistree =
+  bijou?.type_bijou === "voix_enregistree" ||
+  bijou?.type_bijou === "voix_enregistrée";
+
 try {
   // Si c'est une voix enregistrée, récupérer l'URL de la voix
-  if (bijou?.type_bijou === "voix_enregistree" || bijou?.type_bijou === "voix_enregistrée") {
+  if (isVoixEnregistree) {
     const { data: voixData, error: voixErr } = await supabase
       .from("voix_enregistrees")
       .select("audio_url")
@@ -429,6 +433,10 @@ try {
 
     if (!voixErr && voixData) {
       setAudioUrl(voixData.audio_url);
+      // Auto-play voix enregistrée après chargement
+      setImmediate(() => {
+        void playAudio().catch(console.error);
+      });
     }
   } else {
     // Sinon générer avec TTS (murmures_IA)
