@@ -9,6 +9,8 @@ type VoixEnregistree = {
   audio_url: string;
   is_locked: boolean;
   created_at: string;
+  lectures_restantes: number;
+  lectures_totales: number;
 };
 
 type Bijou = {
@@ -29,6 +31,7 @@ export default function RecordedListenClient() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [hasDecrementedThisSession, setHasDecrementedThisSession] = useState(false);
 
   // Charger les données
   useEffect(() => {
@@ -56,6 +59,13 @@ export default function RecordedListenClient() {
           .single();
 
         if (voixError) throw new Error("Voix enregistrée non trouvée");
+        
+        // Vérifier si lectures_restantes = 0
+        if (voixData.lectures_restantes === 0) {
+          router.push(`/recharge/${id_bijou}`);
+          return;
+        }
+        
         setVoix(voixData);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Erreur inconnue";
@@ -66,7 +76,7 @@ export default function RecordedListenClient() {
     };
 
     loadData();
-  }, [id_bijou]);
+  }, [id_bijou, router]);
 
   // Gérer la lecture
   const togglePlay = async () => {
@@ -77,6 +87,34 @@ export default function RecordedListenClient() {
       audio.pause();
       setIsPlaying(false);
     } else {
+      // Décrémenter les lectures restantes au premier clic
+      if (!hasDecrementedThisSession && voix.lectures_restantes > 0) {
+        const newCount = voix.lectures_restantes - 1;
+        
+        try {
+          // Mettre à jour en DB
+          const { error } = await supabase
+            .from("voix_enregistrees")
+            .update({ 
+              lectures_restantes: newCount,
+              lectures_totales: voix.lectures_totales + 1
+            })
+            .eq("id", voix.id);
+
+          if (error) throw error;
+
+          // Mettre à jour l'état local
+          setVoix({
+            ...voix,
+            lectures_restantes: newCount,
+            lectures_totales: voix.lectures_totales + 1
+          });
+          setHasDecrementedThisSession(true);
+        } catch (err) {
+          console.error("Erreur décrément lectures:", err);
+        }
+      }
+
       if (!audio.src) {
         audio.src = voix.audio_url;
       }
@@ -165,7 +203,7 @@ export default function RecordedListenClient() {
           {/* Play Button */}
           <button
             onClick={togglePlay}
-            className="w-full mb-6 px-8 py-4 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-full text-white font-bold text-lg transition transform hover:scale-105 active:scale-95"
+            className="w-full mb-6 px-8 py-4 bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-full text-white font-bold text-lg transition transform hover:scale-105 active:scale-95"
           >
             {isPlaying ? "⏸ Pause" : "▶ Écouter le message"}
           </button>
@@ -194,8 +232,9 @@ export default function RecordedListenClient() {
           )}
 
           {/* Message Info */}
-          <div className="text-center text-sm text-slate-400">
+          <div className="text-center text-sm text-slate-400 space-y-1">
             <p>Enregistré le {new Date(voix.created_at).toLocaleDateString("fr-FR")}</p>
+            <p className="text-slate-300 font-medium">📖 {voix.lectures_restantes} lecture{voix.lectures_restantes !== 1 ? "s" : ""} restante{voix.lectures_restantes !== 1 ? "s" : ""}</p>
             {voix.is_locked && (
               <p className="text-pink-400 mt-2">🔒 Message verrouillé et sécurisé</p>
             )}

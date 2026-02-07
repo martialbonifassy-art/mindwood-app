@@ -34,4 +34,6 @@ CREATE INDEX idx_recording_drafts_expires ON recording_drafts(expires_at);
 -- Mettre à jour voix_enregistrees pour ajouter des infos utiles
 ALTER TABLE voix_enregistrees 
 ADD COLUMN IF NOT EXISTS enregistreur_nom TEXT,
-ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT TRUE;
+ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS lectures_restantes INTEGER DEFAULT 10,
+ADD COLUMN IF NOT EXISTS lectures_totales INTEGER DEFAULT 0;

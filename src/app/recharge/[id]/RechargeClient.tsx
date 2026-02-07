@@ -8,6 +8,13 @@ type BijouRow = {
   id_bijou: string;
   credits_restants: number;
   actif: boolean;
+  type_bijou?: string;
+};
+
+type VoixEnregistree = {
+  id: string;
+  lectures_restantes: number;
+  lectures_totales: number;
 };
 
 export default function RechargeClient() {
@@ -15,21 +22,38 @@ export default function RechargeClient() {
   const id_bijou = params?.id;
   const router = useRouter();
   const [bijou, setBijou] = useState<BijouRow | null>(null);
+  const [voix, setVoix] = useState<VoixEnregistree | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [rechargeType, setRechargeType] = useState<"lectures" | "credits">("credits");
 
   useEffect(() => {
-    async function loadBijou() {
+    async function loadData() {
       try {
         const { data, error: err } = await supabase
           .from("bijoux")
-          .select("id_bijou,credits_restants,actif")
+          .select("id_bijou,credits_restants,actif,type_bijou")
           .eq("id_bijou", id_bijou)
           .single();
 
         if (err) throw err;
         setBijou(data as BijouRow);
+
+        // Si c'est une voix_enregistree, charger aussi les infos de lectures
+        if (data?.type_bijou === "voix_enregistree") {
+          const { data: voixData, error: voixErr } = await supabase
+            .from("voix_enregistrees")
+            .select("*")
+            .eq("id_bijou", id_bijou)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (voixErr) throw voixErr;
+          setVoix(voixData);
+          setRechargeType("lectures");
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Erreur lors du chargement";
         setError(message);
@@ -39,21 +63,43 @@ export default function RechargeClient() {
     }
 
     if (id_bijou) {
-      loadBijou();
+      loadData();
     }
   }, [id_bijou]);
 
-  async function handleRecharge(credits: 10 | 20) {
+  async function handleRecharge(amount: 10 | 20) {
     if (processing) return;
     
     setProcessing(true);
     setError(null);
 
     try {
+      // Si c'est une recharge de lectures, mettre à jour directement en DB
+      if (rechargeType === "lectures" && voix) {
+        const newLectures = voix.lectures_restantes + amount;
+        
+        const { error: updateError } = await supabase
+          .from("voix_enregistrees")
+          .update({ lectures_restantes: newLectures })
+          .eq("id", voix.id);
+
+        if (updateError) throw updateError;
+
+        // Mettre à jour l'état local
+        setVoix({ ...voix, lectures_restantes: newLectures });
+        
+        // Redirection après succès
+        setTimeout(() => {
+          router.push(`/listen/recorded/${id_bijou}`);
+        }, 1500);
+        return;
+      }
+
+      // Sinon, passer par Stripe pour les crédits
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_bijou, credits }),
+        body: JSON.stringify({ id_bijou, credits: amount }),
       });
 
       if (!res.ok) {
@@ -92,11 +138,23 @@ export default function RechargeClient() {
       <div style={S.shell}>
         <div style={S.content}>
           <div style={S.header}>
-            <h1 style={S.title}>Recharge de crédits</h1>
+            <h1 style={S.title}>
+              {rechargeType === "lectures" ? "Recharge de lectures" : "Recharge de crédits"}
+            </h1>
             <p style={S.subtitle}>
-              Tu as actuellement <strong>{bijou?.credits_restants ?? 0}</strong> message
-              {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""} restant
-              {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""}
+              {rechargeType === "lectures" ? (
+                <>
+                  Tu as actuellement <strong>{voix?.lectures_restantes ?? 0}</strong> lecture
+                  {(voix?.lectures_restantes ?? 0) !== 1 ? "s" : ""} restante
+                  {(voix?.lectures_restantes ?? 0) !== 1 ? "s" : ""}
+                </>
+              ) : (
+                <>
+                  Tu as actuellement <strong>{bijou?.credits_restants ?? 0}</strong> message
+                  {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""} restant
+                  {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""}
+                </>
+              )}
             </p>
           </div>
 
@@ -108,13 +166,15 @@ export default function RechargeClient() {
           )}
 
           <div style={S.options}>
-            {/* Option 1: Recharger sans modifier la personnalisation */}
+            {/* Recharger lectures ou crédits */}
             <div style={S.optionCard}>
               <div style={S.optionIcon}>⚡</div>
               <div style={S.optionContent}>
                 <h3 style={S.optionTitle}>Recharger maintenant</h3>
                 <p style={S.optionDescription}>
-                  Continue avec tes paramètres actuels et paie pour plus de messages
+                  {rechargeType === "lectures"
+                    ? "Obtiens plus de lectures pour continuer à écouter le message"
+                    : "Continue avec tes paramètres actuels et paie pour plus de messages"}
                 </p>
               </div>
               <div style={S.packagesGrid}>
@@ -124,7 +184,9 @@ export default function RechargeClient() {
                   style={S.packageBtn}
                 >
                   <div style={S.pkgPrice}>5€</div>
-                  <div style={S.pkgDesc}>10 messages</div>
+                  <div style={S.pkgDesc}>
+                    {rechargeType === "lectures" ? "10 lectures" : "10 messages"}
+                  </div>
                 </button>
                 <button
                   onClick={() => handleRecharge(20)}
@@ -132,35 +194,43 @@ export default function RechargeClient() {
                   style={{ ...S.packageBtn, ...S.packageBtnPopular }}
                 >
                   <div style={S.pkgPrice}>10€</div>
-                  <div style={S.pkgDesc}>20 messages</div>
+                  <div style={S.pkgDesc}>
+                    {rechargeType === "lectures" ? "20 lectures" : "20 messages"}
+                  </div>
                 </button>
               </div>
             </div>
 
-            {/* Option 2: Modifier la personnalisation */}
-            <div style={S.optionCard}>
-              <div style={S.optionIcon}>✏️</div>
-              <div style={S.optionContent}>
-                <h3 style={S.optionTitle}>Modifier mes paramètres</h3>
-                <p style={S.optionDescription}>
-                  Personnalise à nouveau ton thème, ton prénom et tes préférences
-                </p>
+            {/* Option 2: Modifier la personnalisation (sauf pour lectures) */}
+            {rechargeType !== "lectures" && (
+              <div style={S.optionCard}>
+                <div style={S.optionIcon}>✏️</div>
+                <div style={S.optionContent}>
+                  <h3 style={S.optionTitle}>Modifier mes paramètres</h3>
+                  <p style={S.optionDescription}>
+                    Personnalise à nouveau ton thème, ton prénom et tes préférences
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push(`/setup/${id_bijou}`)}
+                  disabled={processing}
+                  style={S.modifyBtn}
+                >
+                  Aller à la personnalisation →
+                </button>
               </div>
-              <button
-                onClick={() => router.push(`/setup/${id_bijou}`)}
-                disabled={processing}
-                style={S.modifyBtn}
-              >
-                Aller à la personnalisation →
-              </button>
-            </div>
+            )}
 
-            {/* Option 3: Retourner à l'écoute */}
+            {/* Option 3: Retourner */}
             <button
-              onClick={() => router.push(`/listen/${id_bijou}`)}
+              onClick={() =>
+                rechargeType === "lectures"
+                  ? router.push(`/listen/recorded/${id_bijou}`)
+                  : router.push(`/listen/${id_bijou}`)
+              }
               style={S.backBtn}
             >
-              ← Retour à l'écoute
+              ← Retour
             </button>
           </div>
         </div>

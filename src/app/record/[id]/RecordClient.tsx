@@ -355,7 +355,7 @@ export default function RecordClient() {
           </div>
 
           <div className="animate-pulse">
-            <div className="h-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"></div>
+            <div className="h-1 bg-linear-to-r from-pink-500 to-rose-500 rounded-full"></div>
           </div>
         </div>
       </div>
