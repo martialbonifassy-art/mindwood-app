@@ -434,9 +434,13 @@ try {
     if (!voixErr && voixData) {
       setAudioUrl(voixData.audio_url);
       // Auto-play voix enregistrée après chargement
-      setImmediate(() => {
-        void playAudio().catch(console.error);
-      });
+      setTimeout(async () => {
+        try {
+          await playAudio();
+        } catch (err) {
+          console.error("Auto-play error:", err);
+        }
+      }, 500); // Attendre que l'audio soit chargé
     }
   } else {
     // Sinon générer avec TTS (murmures_IA)

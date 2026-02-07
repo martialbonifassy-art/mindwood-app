@@ -228,7 +228,7 @@ export default function RecordClient() {
 
         // Rediriger après 2 secondes
         setTimeout(() => {
-          router.push(`/listen/${id_bijou}`);
+          router.push(`/listen/recorded/${id_bijou}`);
         }, 2000);
       };
       reader.readAsDataURL(recordingBlob);
@@ -288,24 +288,24 @@ export default function RecordClient() {
   }
 
   // Vérifier si déjà enregistré et verrouillé
-  if (config?.voixEnregistree?.is_locked && config?.session?.locked) {
+  if (config?.session?.locked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center text-white max-w-md px-4">
           <div className="mb-6 text-5xl">🔒</div>
           <h1 className="text-2xl font-bold mb-4">Enregistrement verrouillé</h1>
           <p className="text-slate-300 mb-6">
-            Votre message pour <strong>{bijou.destinataire_prenom}</strong> a
-            été enregistré et verrouillé.
+            Votre message pour <strong>{bijou.prenom || "le destinataire"}</strong> a
+            été enregistré et est maintenant verrouillé définitivement.
           </p>
           <p className="text-sm text-slate-400 mb-6">
-            Vous ne pouvez plus modifier ou re-enregistrer ce message.
+            Vous ne pouvez plus le modifier. Le destinataire peut l'écouter à tout moment.
           </p>
           <button
-            onClick={() => router.push(`/listen/${id_bijou}`)}
+            onClick={() => router.push(`/listen/recorded/${id_bijou}`)}
             className="px-6 py-2 bg-pink-500 hover:bg-pink-600 rounded-lg transition font-medium"
           >
-            Retourner à l'écoute
+            Écouter le message
           </button>
         </div>
       </div>
@@ -340,11 +340,23 @@ export default function RecordClient() {
         <div className="text-center text-white max-w-md px-4">
           <div className="mb-6 text-5xl">✨</div>
           <h1 className="text-2xl font-bold mb-4">Message enregistré!</h1>
-          <p className="text-slate-300">
-            Votre message pour <strong>{bijou.destinataire_prenom}</strong> est
-            sauvegardé et verrouillé.
+          <p className="text-slate-300 mb-8">
+            Votre message pour <strong>{bijou.prenom || "le destinataire"}</strong> est
+            sauvegardé et verrouillé définitivement.
           </p>
-          <p className="text-sm text-slate-400 mt-4">Redirection...</p>
+          
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-6">
+            <p className="text-sm text-slate-300 mb-3">
+              ✓ Le destinataire peut écouter en scannant la puce du bijou
+            </p>
+            <p className="text-xs text-slate-400">
+              Redirection automatique vers la page d'écoute...
+            </p>
+          </div>
+
+          <div className="animate-pulse">
+            <div className="h-1 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"></div>
+          </div>
         </div>
       </div>
     );
