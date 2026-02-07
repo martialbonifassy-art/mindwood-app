@@ -48,14 +48,12 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 ## 📦 Packages de crédits configurés
 
-| Crédits | Prix | Réduction |
-|---------|------|-----------|
-| 10      | 10€  | -         |
-| 25      | 22.5€| 10%       |
-| 50      | 40€  | 20%       |
-| 100     | 70€  | 30%       |
+| Crédits | Prix | Prix/message |
+|---------|------|--------------|
+| 10      | 5€   | 0.50€        |
+| 20      | 10€  | 0.50€        |
 
-**Prix par crédit:** 1€ (modifiable dans `/api/stripe/create-checkout-session/route.ts`)
+Les packages sont fixes et définis dans `/api/stripe/create-checkout-session/route.ts`
 
 ## 🚀 Utilisation
 
@@ -114,20 +112,21 @@ Avant de passer en production:
 
 ## 🎨 Personnalisation
 
-### Modifier les prix
+### Modifier les packages
 
 Dans `/api/stripe/create-checkout-session/route.ts`:
 ```typescript
-const PRICE_PER_CREDIT = 100; // en centimes (100 = 1€)
+const PACKAGES = {
+  10: 500,  // 10 messages = 5€
+  20: 1000, // 20 messages = 10€
+};
 ```
-
-### Modifier les packages
 
 Dans `/components/RechargePanel.tsx`:
 ```typescript
 const CREDIT_PACKAGES = [
-  { credits: 10, price: 10, popular: false },
-  // Ajouter vos packages ici
+  { credits: 10, price: 5, popular: false },
+  { credits: 20, price: 10, popular: true },
 ];
 ```
 

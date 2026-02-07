@@ -8,10 +8,8 @@ type RechargePanelProps = {
 };
 
 const CREDIT_PACKAGES = [
-  { credits: 10, price: 10, popular: false },
-  { credits: 25, price: 22.5, popular: true, discount: "10%" },
-  { credits: 50, price: 40, popular: false, discount: "20%" },
-  { credits: 100, price: 70, popular: false, discount: "30%" },
+  { credits: 10, price: 5, popular: false },
+  { credits: 20, price: 10, popular: true },
 ];
 
 export default function RechargePanel({ id_bijou, currentCredits = 0 }: RechargePanelProps) {
@@ -85,9 +83,7 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
 
             <div style={S.priceSection}>
               <div style={S.price}>{pkg.price}€</div>
-              {pkg.discount && (
-                <div style={S.discount}>Économise {pkg.discount}</div>
-              )}
+              <div style={S.pricePerMessage}>{(pkg.price / pkg.credits).toFixed(2)}€ / message</div>
             </div>
 
             <button
@@ -238,10 +234,11 @@ const S: Record<string, React.CSSProperties> = {
     color: "rgba(240,210,180,1)",
     marginBottom: 6,
   },
-  discount: {
-    fontSize: 13,
-    color: "rgba(100,200,150,1)",
-    fontWeight: 700,
+  pricePerMessage: {
+    fontSize: 12,
+    opacity: 0.65,
+    color: "rgba(210,180,140,1)",
+    marginTop: 4,
   },
   button: {
     width: "100%",

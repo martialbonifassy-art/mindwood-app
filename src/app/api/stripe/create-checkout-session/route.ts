@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2026-01-28.clover",
 });
 
 type RequestBody = {
@@ -10,8 +10,11 @@ type RequestBody = {
   credits: number; // nombre de crédits à acheter
 };
 
-// Prix par crédit (en centimes)
-const PRICE_PER_CREDIT = 100; // 1€ par crédit
+// Prix par package (en centimes)
+const PACKAGES = {
+  10: 500,  // 10 messages = 5€
+  20: 1000, // 20 messages = 10€
+};
 
 export async function POST(req: Request) {
   try {
@@ -24,14 +27,14 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!body.credits || body.credits <= 0) {
+    if (!body.credits || ![10, 20].includes(body.credits)) {
       return NextResponse.json(
-        { error: "Nombre de crédits invalide" },
+        { error: "Package invalide. Choisir 10 ou 20 messages." },
         { status: 400 }
       );
     }
 
-    const amount = body.credits * PRICE_PER_CREDIT;
+    const amount = PACKAGES[body.credits as 10 | 20];
 
     // Créer une session Checkout
     const session = await stripe.checkout.sessions.create({
@@ -41,13 +44,13 @@ export async function POST(req: Request) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: `${body.credits} message${body.credits > 1 ? "s" : ""} Mindwood`,
-              description: `Recharge de ${body.credits} murmure${body.credits > 1 ? "s" : ""} personnalisé${body.credits > 1 ? "s" : ""}`,
-              images: ["https://mindwood.art/logo.png"], // à remplacer par votre logo
+              name: `${body.credits} messages Mindwood`,
+              description: `Recharge de ${body.credits} murmures personnalisés`,
+              images: ["https://mindwood.art/logo.png"],
             },
-            unit_amount: PRICE_PER_CREDIT,
+            unit_amount: amount,
           },
-          quantity: body.credits,
+          quantity: 1,
         },
       ],
       mode: "payment",

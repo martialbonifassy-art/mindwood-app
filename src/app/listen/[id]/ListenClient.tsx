@@ -674,7 +674,7 @@ try {
                   <div style={S.rechargeText}>Recharge pour continuer à découvrir tes murmures</div>
                 </div>
                 <button
-                  onClick={() => window.location.href = `/setup/${id_bijou}`}
+                  onClick={() => window.location.href = `/recharge/${id_bijou}`}
                   style={S.rechargeBtn}
                   className="mw-rechargeBtn"
                 >

@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2026-01-28.clover",
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -82,17 +82,19 @@ export async function POST(req: Request) {
       );
 
       // Optionnel: Enregistrer la transaction
-      await supabase.from("transactions").insert({
+      const { error: transactionError } = await supabase.from("transactions").insert({
         id_bijou,
         type: "recharge",
         credits,
         montant: session.amount_total ? session.amount_total / 100 : 0,
         stripe_session_id: session.id,
         stripe_payment_status: session.payment_status,
-      }).catch((err) => {
-        // Ne pas faire échouer si la table transactions n'existe pas
-        console.warn("Transaction log failed (table may not exist):", err);
       });
+      
+      if (transactionError) {
+        // Ne pas faire échouer si la table transactions n'existe pas
+        console.warn("Transaction log failed (table may not exist):", transactionError);
+      }
 
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout des crédits:", error);
