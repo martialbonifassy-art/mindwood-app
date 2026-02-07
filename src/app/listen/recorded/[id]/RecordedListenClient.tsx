@@ -88,7 +88,7 @@ export default function RecordedListenClient() {
       setIsPlaying(false);
     } else {
       // Décrémenter les lectures restantes au premier clic
-      if (!hasDecrementedThisSession && voix.lectures_restantes > 0) {
+      if (!hasDecrementedThisSession && voix.lectures_restantes >= 1) {
         const newCount = voix.lectures_restantes - 1;
         
         try {
@@ -110,6 +110,13 @@ export default function RecordedListenClient() {
             lectures_totales: voix.lectures_totales + 1
           });
           setHasDecrementedThisSession(true);
+
+          // Si on vient d'atteindre 0, rediriger vers recharge après la lecture
+          if (newCount === 0) {
+            setTimeout(() => {
+              router.push(`/recharge/${id_bijou}`);
+            }, 2000);
+          }
         } catch (err) {
           console.error("Erreur décrément lectures:", err);
         }
