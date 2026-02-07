@@ -10,7 +10,9 @@ type BijouRow = {
   actif: boolean;
 };
 
-export default function RechargeClient({ id_bijou }: { id_bijou: string }) {
+export default function RechargeClient() {
+  const params = useParams<{ id: string }>();
+  const id_bijou = params?.id;
   const router = useRouter();
   const [bijou, setBijou] = useState<BijouRow | null>(null);
   const [loading, setLoading] = useState(true);
