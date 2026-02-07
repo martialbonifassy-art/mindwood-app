@@ -277,7 +277,29 @@ export default function ListenClient() {
     }
 
     try {
-      await playAudio();
+      // Si l'audio est déjà généré, jouer directement
+      if (audioUrl) {
+        await playAudio();
+      } else {
+        // Sinon générer et jouer
+        const url = await ensureAudioUrl();
+        const audio = audioRef.current;
+        if (!audio) throw new Error("Audio element manquant.");
+        if (audio.src !== url) {
+          audio.src = url;
+        }
+        audio.playbackRate = playbackRateRef.current;
+        try {
+          audio.load();
+        } catch {}
+        audio.volume = 0;
+        const p = audio.play();
+        if (p && typeof p.then === "function") await p;
+        fadeVolume(audio, 0, 1, fadeInRef.current);
+        setIsPlaying(true);
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = () => setIsPlaying(false);
+      }
     } catch (e) {
       stopAudio(true);
       console.error(e);
@@ -369,7 +391,45 @@ if (!res.ok) {
 }
 
 const data = await res.json();
-setMessage(String(data.text || "").trim());
+const newMessage = String(data.text || "").trim();
+setMessage(newMessage);
+
+// Générer l'audio automatiquement après le message
+setAudioLoading(true);
+try {
+  const lang = safeLang(bijou?.langue);
+  const gender = toTtsGender(perso?.voix);
+  
+  const ttsRes = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: newMessage,
+      lang,
+      voice: gender,
+      meta: {
+        theme: perso?.theme,
+        subtheme: perso?.sous_theme,
+      },
+    }),
+  });
+
+  if (!ttsRes.ok) {
+    const err = await ttsRes.json().catch(() => ({}));
+    throw new Error(err?.error || "Erreur TTS");
+  }
+
+  const ttsData = (await ttsRes.json()) as TTSResponse;
+  playbackRateRef.current = typeof ttsData.playbackRate === "number" ? ttsData.playbackRate : 1.0;
+  fadeInRef.current = typeof ttsData.fadeInMs === "number" ? ttsData.fadeInMs : 300;
+  fadeOutRef.current = typeof ttsData.fadeOutMs === "number" ? ttsData.fadeOutMs : 600;
+  setAudioUrl(ttsData.url);
+} catch (ttsError: unknown) {
+  console.error("Erreur génération audio:", ttsError);
+  // On ne bloque pas : le message est affiché, l'audio peut être régénéré au clic
+} finally {
+  setAudioLoading(false);
+}
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Erreur lors de la génération.";
       setError(message);
@@ -379,7 +439,11 @@ setMessage(String(data.text || "").trim());
   }
 
   // ===== UI minimale =====
-  const buttonLabel = audioLoading ? "Génération…" : isPlaying ? "Stop audio" : "Audio";
+  const buttonLabel = audioLoading 
+    ? "Génération audio…" 
+    : audioUrl 
+      ? (isPlaying ? "⏸ Pause" : "▶ Écouter")
+      : "Audio";
   const credits = bijou?.credits_restants ?? null;
   const isActive = bijou?.actif ?? null;
   const canUse = bijou ? Boolean(bijou.actif) && Number(bijou.credits_restants) > 0 : false;
@@ -601,8 +665,23 @@ setMessage(String(data.text || "").trim());
             </button>
           </div>
 
-          {bijou && !canUse ? (
-            <div style={S.rechargeHint}>Crédits à 0 — recharge nécessaire (Stripe ensuite).</div>
+          {bijou && !canUse && bijou.credits_restants === 0 ? (
+            <div style={{ ...S.rechargeContainer, marginTop: 20 }}>
+              <div style={S.rechargeCard}>
+                <div style={S.rechargeIcon}>⚡</div>
+                <div style={S.rechargeMeta}>
+                  <div style={S.rechargeTitle}>Crédits épuisés</div>
+                  <div style={S.rechargeText}>Recharge pour continuer à découvrir tes murmures</div>
+                </div>
+                <button
+                  onClick={() => window.location.href = `/setup/${id_bijou}`}
+                  style={S.rechargeBtn}
+                  className="mw-rechargeBtn"
+                >
+                  Recharger →
+                </button>
+              </div>
+            </div>
           ) : null}
         </section>
       </div>
@@ -726,6 +805,22 @@ function PremiumCss() {
         box-shadow: 0 8px 24px rgba(0,0,0,0.08);
       }
 
+      /* Recharge button */
+      .mw-rechargeBtn {
+        position: relative;
+        overflow: hidden;
+      }
+      .mw-rechargeBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 20px 50px rgba(255,150,80,0.25),
+          0 10px 25px rgba(0,0,0,0.35),
+          inset 0 1px 0 rgba(255,230,200,0.4);
+      }
+      .mw-rechargeBtn:active {
+        transform: translateY(0px) scale(0.98);
+      }
+
       /* Floating particles effect */
       @keyframes mw-float1 {
         0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
@@ -793,6 +888,10 @@ function PremiumCss() {
         .mw-hero { padding: 12px; }
         .mw-messageCard { padding: 12px; }
         .mw-topBar { padding: 6px; }
+        .mw-rechargeCard {
+          flex-direction: column;
+          gap: 12px;
+        }
       }
 
       @media (min-width: 769px) and (max-height: 600px) {
@@ -1050,5 +1149,59 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 650,
     color: "rgba(210,175,140,0.95)",
     textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+  },
+  rechargeContainer: {
+    position: "relative" as const,
+    zIndex: 1,
+  },
+  rechargeCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+    padding: 18,
+    borderRadius: 22,
+    border: "1.5px solid rgba(255,150,80,0.35)",
+    background: "linear-gradient(135deg, rgba(80,45,25,0.85), rgba(65,35,15,0.92))",
+    boxShadow:
+      "0 28px 70px rgba(255,150,80,0.12), " +
+      "0 14px 40px rgba(0,0,0,0.35), " +
+      "inset 0 1px 0 rgba(255,180,120,0.15)",
+  },
+  rechargeIcon: {
+    fontSize: 28,
+    lineHeight: 1,
+    flex: "0 0 auto",
+  },
+  rechargeMeta: {
+    flex: 1,
+    display: "grid",
+    gap: 4,
+  },
+  rechargeTitle: {
+    fontWeight: 950,
+    fontSize: 15,
+    color: "rgba(255,200,140,1)",
+    letterSpacing: 0.2,
+  },
+  rechargeText: {
+    fontSize: 13,
+    opacity: 0.85,
+    color: "rgba(220,175,130,0.95)",
+    lineHeight: 1.4,
+  },
+  rechargeBtn: {
+    padding: "12px 20px",
+    borderRadius: 16,
+    border: "1.5px solid rgba(255,150,80,0.45)",
+    background: "linear-gradient(135deg, rgba(255,160,90,0.95), rgba(220,130,60,0.95))",
+    fontWeight: 950,
+    letterSpacing: 0.3,
+    fontSize: 13,
+    color: "rgba(35,20,10,1)",
+    textShadow: "0 1px 2px rgba(255,220,180,0.35)",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flex: "0 0 auto",
+    transition: "all 200ms cubic-bezier(.2,.7,.2,1)",
   },
 };
