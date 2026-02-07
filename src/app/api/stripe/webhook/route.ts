@@ -46,6 +46,7 @@ export async function POST(req: Request) {
 
     const id_bijou = session.metadata?.id_bijou;
     const credits = parseInt(session.metadata?.credits || "0", 10);
+    const kind = session.metadata?.kind === "lectures" ? "lectures" : "credits";
 
     if (!id_bijou || !credits) {
       console.error("Metadata manquantes dans la session Stripe:", session.id);
@@ -55,36 +56,61 @@ export async function POST(req: Request) {
       );
     }
 
-    // Ajouter les crédits au bijou
+    // Ajouter les crédits ou lectures
     try {
-      const { data: bijou, error: fetchError } = await supabase
-        .from("bijoux")
-        .select("credits_restants")
-        .eq("id_bijou", id_bijou)
-        .single();
+      if (kind === "lectures") {
+        const { data: voix, error: fetchError } = await supabase
+          .from("voix_enregistrees")
+          .select("id,lectures_restantes")
+          .eq("id_bijou", id_bijou)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-      const nouveauxCredits = (bijou?.credits_restants || 0) + credits;
+        const nouvellesLectures = (voix?.lectures_restantes || 0) + credits;
 
-      const { error: updateError } = await supabase
-        .from("bijoux")
-        .update({ 
-          credits_restants: nouveauxCredits,
-          actif: true // Réactiver le bijou si nécessaire
-        })
-        .eq("id_bijou", id_bijou);
+        const { error: updateError } = await supabase
+          .from("voix_enregistrees")
+          .update({ lectures_restantes: nouvellesLectures })
+          .eq("id", voix.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      console.log(
-        `✅ Paiement confirmé: ${credits} crédits ajoutés au bijou ${id_bijou} (total: ${nouveauxCredits})`
-      );
+        console.log(
+          `✅ Paiement confirmé: ${credits} lectures ajoutées au bijou ${id_bijou} (total: ${nouvellesLectures})`
+        );
+      } else {
+        const { data: bijou, error: fetchError } = await supabase
+          .from("bijoux")
+          .select("credits_restants")
+          .eq("id_bijou", id_bijou)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const nouveauxCredits = (bijou?.credits_restants || 0) + credits;
+
+        const { error: updateError } = await supabase
+          .from("bijoux")
+          .update({
+            credits_restants: nouveauxCredits,
+            actif: true // Réactiver le bijou si nécessaire
+          })
+          .eq("id_bijou", id_bijou);
+
+        if (updateError) throw updateError;
+
+        console.log(
+          `✅ Paiement confirmé: ${credits} crédits ajoutés au bijou ${id_bijou} (total: ${nouveauxCredits})`
+        );
+      }
 
       // Optionnel: Enregistrer la transaction
       const { error: transactionError } = await supabase.from("transactions").insert({
         id_bijou,
-        type: "recharge",
+        type: kind === "lectures" ? "recharge_lectures" : "recharge",
         credits,
         montant: session.amount_total ? session.amount_total / 100 : 0,
         stripe_session_id: session.id,

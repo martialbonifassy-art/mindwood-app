@@ -7,7 +7,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 type RequestBody = {
   id_bijou: string;
-  credits: number; // nombre de crédits à acheter
+  credits: number; // nombre d'unités à acheter
+  kind?: "credits" | "lectures";
 };
 
 // Prix par package (en centimes)
@@ -34,12 +35,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const kind = body.kind === "lectures" ? "lectures" : "credits";
+
     const amount = PACKAGES[body.credits as 10 | 20];
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                     process.env.VERCEL_URL 
-                       ? `https://${process.env.VERCEL_URL}`
-                       : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
     // Créer une session Checkout
     const session = await stripe.checkout.sessions.create({
@@ -49,8 +50,12 @@ export async function POST(req: Request) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: `${body.credits} messages Mindwood`,
-              description: `Recharge de ${body.credits} murmures personnalisés`,
+              name: kind === "lectures"
+                ? `${body.credits} lectures Mindwood`
+                : `${body.credits} messages Mindwood`,
+              description: kind === "lectures"
+                ? `Recharge de ${body.credits} lectures pour message enregistré`
+                : `Recharge de ${body.credits} murmures personnalisés`,
               images: ["https://mindwood.art/logo.png"],
             },
             unit_amount: amount,
@@ -59,11 +64,14 @@ export async function POST(req: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${baseUrl}/listen/${body.id_bijou}?payment=success`,
+      success_url: kind === "lectures"
+        ? `${baseUrl}/recharge/success/${body.id_bijou}?session_id={CHECKOUT_SESSION_ID}`
+        : `${baseUrl}/listen/${body.id_bijou}?payment=success`,
       cancel_url: `${baseUrl}/recharge/${body.id_bijou}?payment=cancelled`,
       metadata: {
         id_bijou: body.id_bijou,
         credits: body.credits.toString(),
+        kind,
       },
     });
 

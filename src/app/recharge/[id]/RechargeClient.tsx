@@ -74,32 +74,11 @@ export default function RechargeClient() {
     setError(null);
 
     try {
-      // Si c'est une recharge de lectures, mettre à jour directement en DB
-      if (rechargeType === "lectures" && voix) {
-        const newLectures = voix.lectures_restantes + amount;
-        
-        const { error: updateError } = await supabase
-          .from("voix_enregistrees")
-          .update({ lectures_restantes: newLectures })
-          .eq("id", voix.id);
-
-        if (updateError) throw updateError;
-
-        // Mettre à jour l'état local
-        setVoix({ ...voix, lectures_restantes: newLectures });
-        
-        // Redirection après succès
-        setTimeout(() => {
-          router.push(`/listen/recorded/${id_bijou}`);
-        }, 1500);
-        return;
-      }
-
-      // Sinon, passer par Stripe pour les crédits
+      const kind = rechargeType === "lectures" ? "lectures" : "credits";
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_bijou, credits: amount }),
+        body: JSON.stringify({ id_bijou, credits: amount, kind }),
       });
 
       if (!res.ok) {

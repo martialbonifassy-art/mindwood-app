@@ -31,7 +31,7 @@ export default function RecordedListenClient() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [hasDecrementedThisSession, setHasDecrementedThisSession] = useState(false);
+  const hasCountedForCurrentPlayRef = useRef(false);
 
   // Charger les données
   useEffect(() => {
@@ -87,39 +87,15 @@ export default function RecordedListenClient() {
       audio.pause();
       setIsPlaying(false);
     } else {
-      // Décrémenter les lectures restantes au premier clic
-      if (!hasDecrementedThisSession && voix.lectures_restantes >= 1) {
-        const newCount = voix.lectures_restantes - 1;
-        
-        try {
-          // Mettre à jour en DB
-          const { error } = await supabase
-            .from("voix_enregistrees")
-            .update({ 
-              lectures_restantes: newCount,
-              lectures_totales: voix.lectures_totales + 1
-            })
-            .eq("id", voix.id);
+      if (voix.lectures_restantes === 0) {
+        router.push(`/recharge/${id_bijou}`);
+        return;
+      }
 
-          if (error) throw error;
-
-          // Mettre à jour l'état local
-          setVoix({
-            ...voix,
-            lectures_restantes: newCount,
-            lectures_totales: voix.lectures_totales + 1
-          });
-          setHasDecrementedThisSession(true);
-
-          // Si on vient d'atteindre 0, rediriger vers recharge après la lecture
-          if (newCount === 0) {
-            setTimeout(() => {
-              router.push(`/recharge/${id_bijou}`);
-            }, 2000);
-          }
-        } catch (err) {
-          console.error("Erreur décrément lectures:", err);
-        }
+      const isAtStart = audio.currentTime <= 0.01;
+      if (isAtStart && !hasCountedForCurrentPlayRef.current) {
+        // Marquer que ce décrément est en cours pour cette session
+        hasCountedForCurrentPlayRef.current = true;
       }
 
       if (!audio.src) {
@@ -132,6 +108,40 @@ export default function RecordedListenClient() {
         console.error("Erreur lecture:", err);
         setError("Impossible de lire l'audio");
       }
+    }
+  };
+
+  // Décrémenter après la fin de la lecture
+  const decrementLecture = async () => {
+    if (!hasCountedForCurrentPlayRef.current || !voix) return;
+
+    const newCount = voix.lectures_restantes - 1;
+
+    try {
+      const { error } = await supabase
+        .from("voix_enregistrees")
+        .update({
+          lectures_restantes: newCount,
+          lectures_totales: voix.lectures_totales + 1,
+        })
+        .eq("id", voix.id);
+
+      if (error) throw error;
+
+      setVoix({
+        ...voix,
+        lectures_restantes: newCount,
+        lectures_totales: voix.lectures_totales + 1,
+      });
+
+      // Si dernier message écouté, rediriger après 2s
+      if (newCount === 0) {
+        setTimeout(() => {
+          router.push(`/recharge/${id_bijou}`);
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Erreur décrément lectures:", err);
     }
   };
 
@@ -149,6 +159,15 @@ export default function RecordedListenClient() {
   };
 
   const handleEnded = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+    setCurrentTime(0);
+    // Décrémenter quand l'audio est fini
+    if (hasCountedForCurrentPlayRef.current) {
+      decrementLecture();
+    }
+    hasCountedForCurrentPlayRef.current = false;
     setIsPlaying(false);
   };
 
@@ -189,78 +208,121 @@ export default function RecordedListenClient() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="max-w-2xl mx-auto p-4 flex flex-col items-center justify-center min-h-screen">
-        {/* Header */}
+    <div className="min-h-screen text-white relative overflow-hidden">
+      {/* Base gradient - warm and hopeful */}
+      <div className="absolute inset-0 bg-linear-to-b from-slate-900 via-slate-800 to-slate-950" />
+      
+      {/* Warm glow from top - sunrise/hope */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-linear-to-b from-amber-600/20 via-rose-500/15 to-transparent blur-3xl pointer-events-none" />
+      
+      {/* Soft side glows */}
+      <div className="absolute top-20 left-0 w-96 h-96 bg-gradient-radial from-sky-400/15 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-0 w-80 h-80 bg-gradient-radial from-purple-400/10 to-transparent blur-3xl pointer-events-none" />
+      
+      {/* Animated snowflakes */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute text-white/40 animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${-10 - Math.random() * 20}%`,
+              fontSize: `${12 + Math.random() * 16}px`,
+              animation: `falling ${8 + Math.random() * 6}s linear infinite`,
+              animationDelay: `${Math.random() * 4}s`,
+            }}
+          >
+            ❄️
+          </div>
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes falling {
+          to {
+            transform: translateY(120vh) translateX(${Math.sin(Math.random()) * 100}px);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
+      <div className="relative max-w-3xl mx-auto px-6 py-16 flex flex-col items-center min-h-screen">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-2">Un message t'attend ✨</h1>
-          <p className="text-slate-300">Une voix enregistrée spécialement pour toi</p>
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm text-xs tracking-[0.3em] uppercase text-white/90 font-light">
+            ✨ Mindwood
+          </div>
+          <h1 className="text-5xl sm:text-6xl font-light mt-8 mb-4 text-white drop-shadow-lg">
+            Un message<br />t'attend
+          </h1>
+          <p className="text-lg text-white/70 font-light">Quelque chose de précieux t'a été confié.</p>
         </div>
 
-        {/* Audio Player Card */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 w-full max-w-md mb-8">
-          <audio
-            ref={audioRef}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onEnded={handleEnded}
-            onError={() => setError("Erreur lecture audio")}
-          />
+        <div className="w-full max-w-2xl">
+          <div className="relative rounded-3xl border border-white/20 bg-white/8 backdrop-blur-2xl shadow-2xl p-10 sm:p-12">
+            {/* Inner glow effect */}
+            <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-white/10 via-transparent to-white/5 pointer-events-none" />
+            
+            {/* Top light reflection */}
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-40 h-20 bg-linear-to-b from-white/20 to-transparent blur-2xl rounded-full" />
 
-          {/* Play Button */}
-          <button
-            onClick={togglePlay}
-            className="w-full mb-6 px-8 py-4 bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-full text-white font-bold text-lg transition transform hover:scale-105 active:scale-95"
-          >
-            {isPlaying ? "⏸ Pause" : "▶ Écouter le message"}
-          </button>
+            <audio
+              ref={audioRef}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={handleEnded}
+              onError={() => setError("Erreur lecture audio")}
+            />
 
-          {/* Progress Bar */}
-          {duration > 0 && (
-            <div className="mb-4">
-              <input
-                type="range"
-                min="0"
-                max={duration}
-                value={currentTime}
-                onChange={(e) => {
-                  const audio = audioRef.current;
-                  if (audio) {
-                    audio.currentTime = parseFloat(e.target.value);
-                  }
-                }}
-                className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-pink-500"
-              />
-              <div className="flex justify-between text-sm text-slate-400 mt-2">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+            <button
+              onClick={togglePlay}
+              className="w-full mb-8 px-8 py-5 rounded-full text-white font-semibold text-lg transition-all transform hover:scale-105 active:scale-95 bg-linear-to-r from-amber-400 via-rose-400 to-sky-400 shadow-lg hover:shadow-xl"
+            >
+              {isPlaying ? "⏸ Pause" : "▶ Écouter le message"}
+            </button>
+
+            {duration > 0 && (
+              <div className="mb-6">
+                <input
+                  type="range"
+                  min="0"
+                  max={duration}
+                  value={currentTime}
+                  onChange={(e) => {
+                    const audio = audioRef.current;
+                    const nextValue = parseFloat(e.target.value);
+                    if (audio) {
+                      audio.currentTime = nextValue;
+                      if (nextValue <= 0.01) {
+                        hasCountedForCurrentPlayRef.current = false;
+                      }
+                    }
+                  }}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer bg-white/20 accent-amber-300"
+                />
+                <div className="flex justify-between text-sm text-white/60 mt-2 font-light">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Message Info */}
-          <div className="text-center text-sm text-slate-400 space-y-1">
-            <p>Enregistré le {new Date(voix.created_at).toLocaleDateString("fr-FR")}</p>
-            <p className="text-slate-300 font-medium">📖 {voix.lectures_restantes} lecture{voix.lectures_restantes !== 1 ? "s" : ""} restante{voix.lectures_restantes !== 1 ? "s" : ""}</p>
-            {voix.is_locked && (
-              <p className="text-pink-400 mt-2">🔒 Message verrouillé et sécurisé</p>
+            <div className="space-y-2 text-sm text-white/70 font-light">
+              <div className="flex items-center justify-between">
+                <span>Enregistré le {new Date(voix.created_at).toLocaleDateString("fr-FR")}</span>
+                <span className="text-white/90">{voix.lectures_restantes} écoute{voix.lectures_restantes !== 1 ? "s" : ""}</span>
+              </div>
+              {voix.is_locked && (
+                <div className="text-amber-200/90 text-xs pt-2">🔒 Message verrouillé et sécurisé</div>
+              )}
+            </div>
+
+            {error && (
+              <div className="mt-6 bg-red-500/10 border border-red-500/30 text-red-300 p-4 rounded-lg text-sm">
+                {error}
+              </div>
             )}
           </div>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="w-full max-w-md bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Info Card */}
-        <div className="w-full max-w-md bg-slate-800/30 border border-slate-700 rounded-lg p-6 text-center">
-          <p className="text-slate-300">
-            💝 Ce message a été spécialement enregistré pour toi.<br />
-            <span className="text-sm text-slate-400">Prends le temps de l'écouter.</span>
-          </p>
         </div>
       </div>
     </div>
