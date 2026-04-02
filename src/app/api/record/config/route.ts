@@ -34,12 +34,14 @@ export async function GET(req: Request) {
       );
     }
 
-    // Récupérer la voix enregistrée finale (s'il existe)
+    // Récupérer la voix enregistrée finale la plus récente (s'il existe)
     const { data: voixEnregistree } = await supabase
       .from("voix_enregistrees")
       .select("id, audio_url, is_locked, created_at")
       .eq("id_bijou", id_bijou)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Récupérer les brouillons
     const { data: drafts } = await supabase

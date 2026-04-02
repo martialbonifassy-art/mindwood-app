@@ -39,8 +39,9 @@ export async function POST(req: Request) {
 
     const amount = PACKAGES[body.credits as 10 | 20];
 
+    const requestOrigin = new URL(req.url).origin;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : requestOrigin);
 
     // Créer une session Checkout
     const session = await stripe.checkout.sessions.create({

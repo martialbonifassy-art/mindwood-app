@@ -35,6 +35,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Metadata invalides" }, { status: 400 });
     }
 
+    // Idempotency: if this session was already processed, return current value without updating
+    const { data: existing } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      // Already processed — just return current state
+      if (kind === "lectures") {
+        const { data: voix } = await supabase
+          .from("voix_enregistrees")
+          .select("lectures_restantes")
+          .eq("id_bijou", id_bijou)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return NextResponse.json({ ok: true, kind, total: voix?.lectures_restantes ?? 0, idempotent: true });
+      }
+      const { data: bijou } = await supabase
+        .from("bijoux")
+        .select("credits_restants")
+        .eq("id_bijou", id_bijou)
+        .maybeSingle();
+      return NextResponse.json({ ok: true, kind, total: bijou?.credits_restants ?? 0, idempotent: true });
+    }
+
     if (kind === "lectures") {
       const { data: voix, error: fetchError } = await supabase
         .from("voix_enregistrees")
@@ -55,6 +83,14 @@ export async function POST(req: Request) {
 
       if (updateError) throw updateError;
 
+      await supabase.from("transactions").insert({
+        id_bijou,
+        type: "recharge_lectures",
+        credits,
+        stripe_session_id: sessionId,
+        stripe_payment_status: session.payment_status,
+      }).then(() => {/* log only, errors non-blocking */});
+
       return NextResponse.json({ ok: true, kind, total: nouvellesLectures });
     }
 
@@ -74,6 +110,14 @@ export async function POST(req: Request) {
       .eq("id_bijou", id_bijou);
 
     if (updateError) throw updateError;
+
+    await supabase.from("transactions").insert({
+      id_bijou,
+      type: "recharge_credits",
+      credits,
+      stripe_session_id: sessionId,
+      stripe_payment_status: session.payment_status,
+    }).then(() => {/* log only, errors non-blocking */});
 
     return NextResponse.json({ ok: true, kind, total: nouveauxCredits });
   } catch (error: unknown) {

@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { useParams, useRouter } from "next/navigation";
 
 type TTSResponse = {
   url: string;
-  voiceProfile?: string; // interne (on ne l'affiche pas)
+  voiceProfile?: string;
   playbackRate?: number;
   fadeInMs?: number;
   fadeOutMs?: number;
@@ -17,7 +16,7 @@ type BijouRow = {
   type_bijou: "murmures_IA" | "voix_enregistrée" | "voix_enregistree" | string;
   langue: "fr" | "en" | string;
   credits_restants: number;
-  actif: boolean;
+  est_active: boolean;
 };
 
 type PersoRow = {
@@ -27,6 +26,23 @@ type PersoRow = {
   theme: string | null;
   sous_theme: string | null;
   voix: "masculin" | "feminin" | string | null;
+};
+
+type ListenLoadResponse = {
+  success: boolean;
+  data?: {
+    bijou: BijouRow;
+    personnalisation: PersoRow | null;
+  };
+  error?: string;
+};
+
+type ConsumeCreditResponse = {
+  success: boolean;
+  data?: {
+    credits_restants: number;
+  };
+  error?: string;
 };
 
 function cleanText(v: unknown) {
@@ -48,18 +64,20 @@ function toTtsGender(voix: unknown): "male" | "female" | "neutral" {
 
 export default function ListenClient() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id_bijou = params?.id;
+
+  const [mode, setMode] = useState<"choice" | "ia">("choice");
 
   const [loading, setLoading] = useState(false);
   const [bijou, setBijou] = useState<BijouRow | null>(null);
   const [perso, setPerso] = useState<PersoRow | null>(null);
 
-  const [message, setMessage] = useState<string>("");
-  const [typed, setTyped] = useState<string>("");
+  const [message, setMessage] = useState("");
+  const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [messageKey, setMessageKey] = useState(0);
 
-  // Audio states
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -67,37 +85,34 @@ export default function ListenClient() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeTimerRef = useRef<number | null>(null);
 
-  // preset from API
-  const playbackRateRef = useRef<number>(1.0);
-  const fadeInRef = useRef<number>(300);
-  const fadeOutRef = useRef<number>(600);
+  const playbackRateRef = useRef(1.0);
+  const fadeInRef = useRef(300);
+  const fadeOutRef = useRef(600);
 
-  // ===== silentLoad: charger bijou/perso au montage =====
   const silentLoad = React.useCallback(async function silentLoad() {
     setError(null);
+
     try {
-      const { data: b, error: bErr } = await supabase
-        .from("bijoux")
-        .select("id_bijou,type_bijou,langue,credits_restants,actif")
-        .eq("id_bijou", id_bijou)
-        .maybeSingle();
+      const res = await fetch(`/api/listen/${id_bijou}`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (bErr) throw bErr;
-      if (b) setBijou(b as BijouRow);
+      const json = (await res.json().catch(() => ({}))) as ListenLoadResponse;
 
-      const { data: p, error: pErr } = await supabase
-        .from("personnalisations")
-        .select("prenom,lieu,souvenir,theme,sous_theme,voix")
-        .eq("id_bijou", id_bijou)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (!res.ok || !json.success || !json.data?.bijou) {
+        throw new Error(json.error || "Erreur lors du chargement.");
+      }
 
-      if (pErr) throw pErr;
-      setPerso((p as PersoRow) ?? null);
+      setBijou(json.data.bijou);
+      setPerso(json.data.personnalisation ?? null);
+
+      return json.data;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erreur lors du chargement.";
+      const message =
+        error instanceof Error ? error.message : "Erreur lors du chargement.";
       setError(message);
+      return null;
     }
   }, [id_bijou]);
 
@@ -106,7 +121,6 @@ export default function ListenClient() {
     void silentLoad();
   }, [id_bijou, silentLoad]);
 
-  // ===== Typewriter effect =====
   useEffect(() => {
     if (!message) {
       setTyped("");
@@ -122,7 +136,9 @@ export default function ListenClient() {
     const timer = window.setInterval(() => {
       i += 1;
       setTyped(message.slice(0, i));
-      if (i >= message.length) window.clearInterval(timer);
+      if (i >= message.length) {
+        window.clearInterval(timer);
+      }
     }, speed);
 
     return () => window.clearInterval(timer);
@@ -139,7 +155,6 @@ export default function ListenClient() {
     };
   }, []);
 
-  // ===== Audio helpers =====
   function clearFadeTimer() {
     if (fadeTimerRef.current) {
       window.clearInterval(fadeTimerRef.current);
@@ -147,12 +162,19 @@ export default function ListenClient() {
     }
   }
 
-  function fadeVolume(audio: HTMLAudioElement, from: number, to: number, ms: number) {
+  function fadeVolume(
+    audio: HTMLAudioElement,
+    from: number,
+    to: number,
+    ms: number
+  ) {
     clearFadeTimer();
+
     if (ms <= 0) {
       audio.volume = to;
       return;
     }
+
     const steps = 20;
     const stepMs = Math.max(10, Math.floor(ms / steps));
     let i = 0;
@@ -173,31 +195,12 @@ export default function ListenClient() {
     if (audioUrl) return audioUrl;
 
     if (!message.trim()) {
-      throw new Error("Message vide : clique sur « Découvrir » avant l'audio.");
+      throw new Error("Message vide : reçois d’abord le message.");
     }
 
     setAudioLoading(true);
+
     try {
-      // Si c'est une voix enregistrée, récupérer l'URL de la voix
-      if (bijou?.type_bijou === "voix_enregistree" || bijou?.type_bijou === "voix_enregistrée") {
-        const { data, error: err } = await supabase
-          .from("voix_enregistrees")
-          .select("audio_url")
-          .eq("id_bijou", bijou.id_bijou)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (err || !data) {
-          throw new Error("Voix enregistrée non trouvée");
-        }
-
-        setAudioUrl(data.audio_url);
-        // Pas de preset pour voix enregistrée : garder les defaults
-        return data.audio_url;
-      }
-
-      // Sinon, générer avec TTS (murmures_IA)
       const lang = safeLang(bijou?.langue);
       const gender = toTtsGender(perso?.voix);
 
@@ -222,9 +225,12 @@ export default function ListenClient() {
 
       const data = (await res.json()) as TTSResponse;
 
-      playbackRateRef.current = typeof data.playbackRate === "number" ? data.playbackRate : 1.0;
-      fadeInRef.current = typeof data.fadeInMs === "number" ? data.fadeInMs : 300;
-      fadeOutRef.current = typeof data.fadeOutMs === "number" ? data.fadeOutMs : 600;
+      playbackRateRef.current =
+        typeof data.playbackRate === "number" ? data.playbackRate : 1.0;
+      fadeInRef.current =
+        typeof data.fadeInMs === "number" ? data.fadeInMs : 300;
+      fadeOutRef.current =
+        typeof data.fadeOutMs === "number" ? data.fadeOutMs : 600;
 
       setAudioUrl(data.url);
       return data.url;
@@ -251,7 +257,9 @@ export default function ListenClient() {
 
     audio.volume = 0;
     const p = audio.play();
-    if (p && typeof p.then === "function") await p;
+    if (p && typeof p.then === "function") {
+      await p;
+    }
 
     fadeVolume(audio, 0, 1, fadeInRef.current);
 
@@ -297,24 +305,29 @@ export default function ListenClient() {
     }
 
     try {
-      // Si l'audio est déjà généré, jouer directement
       if (audioUrl) {
         await playAudio();
       } else {
-        // Sinon générer et jouer
         const url = await ensureAudioUrl();
         const audio = audioRef.current;
         if (!audio) throw new Error("Audio element manquant.");
+
         if (audio.src !== url) {
           audio.src = url;
         }
+
         audio.playbackRate = playbackRateRef.current;
+
         try {
           audio.load();
         } catch {}
+
         audio.volume = 0;
         const p = audio.play();
-        if (p && typeof p.then === "function") await p;
+        if (p && typeof p.then === "function") {
+          await p;
+        }
+
         fadeVolume(audio, 0, 1, fadeInRef.current);
         setIsPlaying(true);
         audio.onended = () => setIsPlaying(false);
@@ -326,7 +339,6 @@ export default function ListenClient() {
     }
   }
 
-  // ===== discoverMessage: generar mensaje =====
   async function discoverMessage() {
     if (!id_bijou) {
       setError("ID bijou manquant dans l'URL.");
@@ -335,61 +347,72 @@ export default function ListenClient() {
 
     setError(null);
 
-    if (!bijou || !perso) {
-      await silentLoad();
-    }
+    const loaded = !bijou || !perso ? await silentLoad() : null;
+    const activeBijou = loaded?.bijou ?? bijou;
+    const activePerso = loaded?.personnalisation ?? perso;
 
-    if (!bijou) {
+    if (!activeBijou) {
       setError("Bijou non trouvé.");
       return;
     }
 
-    if (!bijou.actif) {
+    if (!activeBijou.est_active) {
       setError("Ce bijou n'est pas actif.");
       return;
     }
-    if (bijou.credits_restants <= 0) {
-      setError("Crédits épuisés. Recharge nécessaire.");
+
+    if (activeBijou.credits_restants <= 0) {
+      setError("Ce message n’est pas disponible pour le moment.");
       return;
     }
 
     setLoading(true);
+
     try {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("consume_credit", {
-        p_id_bijou: id_bijou,
+      const consumeRes = await fetch(`/api/listen/${id_bijou}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "consume-credit" }),
       });
 
-      if (rpcErr) {
-        if (rpcErr.message?.includes("NO_CREDITS_OR_INACTIVE")) {
-          setError("Crédits épuisés ou bijou inactif.");
+      const consumeJson =
+        (await consumeRes.json().catch(() => ({}))) as ConsumeCreditResponse;
+
+      if (!consumeRes.ok || !consumeJson.success) {
+        if (consumeJson.error === "NO_CREDITS_OR_INACTIVE") {
+          setError("Ce message n’est pas disponible pour le moment.");
           return;
         }
-        throw rpcErr;
+        throw new Error(
+          consumeJson.error || "Erreur lors de la consommation du crédit."
+        );
       }
 
-      type ConsumeCreditResult = { credits_restants?: number | null };
-      const newCredits = Array.isArray(rpcData)
-        ? (rpcData as ConsumeCreditResult[])[0]?.credits_restants
-        : (rpcData as ConsumeCreditResult | null)?.credits_restants;
-
       setBijou((prev) =>
-        prev ? { ...prev, credits_restants: Number(newCredits ?? prev.credits_restants) } : prev
+        prev
+          ? {
+              ...prev,
+              credits_restants: Number(
+                consumeJson.data?.credits_restants ?? prev.credits_restants
+              ),
+            }
+          : prev
       );
 
       setAudioUrl(null);
       stopAudio(true);
 
-      if (!perso) {
+      if (!activePerso) {
         setError("Personnalisation manquante.");
         return;
       }
 
-      const p = perso;
-      const prenom = cleanText(p?.prenom) || "toi";
-      const theme = cleanText(p?.theme) || "un joli thème";
-      const sous = cleanText(p?.sous_theme);
-      const lieu = cleanText(p?.lieu);
-      const souvenir = cleanText(p?.souvenir);
+      const p = activePerso;
+      const prenom = cleanText(p.prenom) || "toi";
+      const theme = cleanText(p.theme) || "un joli thème";
+      const sous = cleanText(p.sous_theme);
+      const lieu = cleanText(p.lieu);
+      const souvenir = cleanText(p.souvenir);
 
       const res = await fetch("/api/murmure", {
         method: "POST",
@@ -400,101 +423,101 @@ export default function ListenClient() {
           sous_theme: sous,
           lieu,
           souvenir,
-          langue: bijou.langue,
-          voix: p?.voix ?? "feminin",
+          langue: activeBijou.langue,
+          voix: p.voix ?? "feminin",
         }),
       });
 
-if (!res.ok) {
-  const err = await res.json().catch(() => ({}));
-  throw new Error(err?.error || "Erreur génération texte");
-}
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Erreur génération texte");
+      }
 
-const data = await res.json();
-const newMessage = String(data.text || "").trim();
-setMessage(newMessage);
+      const data = await res.json();
+      const newMessage = String(data.text || "").trim();
+      setMessage(newMessage);
 
-// Générer l'audio automatiquement après le message
-setAudioLoading(true);
-const isVoixEnregistree =
-  bijou?.type_bijou === "voix_enregistree" ||
-  bijou?.type_bijou === "voix_enregistrée";
+      setAudioLoading(true);
 
-try {
-  // Si c'est une voix enregistrée, récupérer l'URL de la voix
-  if (isVoixEnregistree) {
-    const { data: voixData, error: voixErr } = await supabase
-      .from("voix_enregistrees")
-      .select("audio_url")
-      .eq("id_bijou", bijou.id_bijou)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      try {
+        const lang = safeLang(activeBijou.langue);
+        const gender = toTtsGender(activePerso?.voix);
 
-    if (!voixErr && voixData) {
-      setAudioUrl(voixData.audio_url);
-      // Auto-play voix enregistrée après chargement
-      setTimeout(async () => {
-        try {
-          await playAudio();
-        } catch (err) {
-          console.error("Auto-play error:", err);
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: newMessage,
+            lang,
+            voice: gender,
+            meta: {
+              theme: activePerso?.theme,
+              subtheme: activePerso?.sous_theme,
+            },
+          }),
+        });
+
+        if (!ttsRes.ok) {
+          const err = await ttsRes.json().catch(() => ({}));
+          throw new Error(err?.error || "Erreur TTS");
         }
-      }, 500); // Attendre que l'audio soit chargé
-    }
-  } else {
-    // Sinon générer avec TTS (murmures_IA)
-    const lang = safeLang(bijou?.langue);
-    const gender = toTtsGender(perso?.voix);
-    
-    const ttsRes = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: newMessage,
-        lang,
-        voice: gender,
-        meta: {
-          theme: perso?.theme,
-          subtheme: perso?.sous_theme,
-        },
-      }),
-    });
 
-    if (!ttsRes.ok) {
-      const err = await ttsRes.json().catch(() => ({}));
-      throw new Error(err?.error || "Erreur TTS");
-    }
+        const ttsData = (await ttsRes.json()) as TTSResponse;
+        playbackRateRef.current =
+          typeof ttsData.playbackRate === "number"
+            ? ttsData.playbackRate
+            : 1.0;
+        fadeInRef.current =
+          typeof ttsData.fadeInMs === "number" ? ttsData.fadeInMs : 300;
+        fadeOutRef.current =
+          typeof ttsData.fadeOutMs === "number" ? ttsData.fadeOutMs : 600;
 
-    const ttsData = (await ttsRes.json()) as TTSResponse;
-    playbackRateRef.current = typeof ttsData.playbackRate === "number" ? ttsData.playbackRate : 1.0;
-    fadeInRef.current = typeof ttsData.fadeInMs === "number" ? ttsData.fadeInMs : 300;
-    fadeOutRef.current = typeof ttsData.fadeOutMs === "number" ? ttsData.fadeOutMs : 600;
-    setAudioUrl(ttsData.url);
-  }
-} catch (ttsError: unknown) {
-  console.error("Erreur génération audio:", ttsError);
-  // On ne bloque pas : le message est affiché, l'audio peut être régénéré au clic
-} finally {
-  setAudioLoading(false);
-}
+        setAudioUrl(ttsData.url);
+
+        setTimeout(async () => {
+          try {
+            await playAudio();
+          } catch (err) {
+            console.error("Auto-play error:", err);
+          }
+        }, 600);
+      } catch (ttsError: unknown) {
+        console.error("Erreur génération audio:", ttsError);
+      } finally {
+        setAudioLoading(false);
+      }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erreur lors de la génération.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la génération.";
       setError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  // ===== UI minimale =====
-  const buttonLabel = audioLoading 
-    ? "Génération audio…" 
-    : audioUrl 
-      ? (isPlaying ? "⏸ Pause" : "▶ Écouter")
-      : "Audio";
-  const credits = bijou?.credits_restants ?? null;
-  const isActive = bijou?.actif ?? null;
-  const canUse = bijou ? Boolean(bijou.actif) && Number(bijou.credits_restants) > 0 : false;
+  const buttonLabel = audioLoading
+    ? "Préparation du message…"
+    : audioUrl
+      ? isPlaying
+        ? "⏸ Pause"
+        : "▶ Écouter le message"
+      : "Écouter";
+
+  const isActive = bijou?.est_active ?? null;
+  const canUse = bijou
+    ? Boolean(bijou.est_active) && Number(bijou.credits_restants) > 0
+    : false;
+
+  function openRecordedVoice() {
+    if (!id_bijou) {
+      setError("ID bijou manquant dans l'URL.");
+      return;
+    }
+
+    router.push(`/setup/${id_bijou}/firstname`);
+  }
 
   return (
     <main style={S.page}>
@@ -507,7 +530,6 @@ try {
         }
       `}</style>
 
-      {/* Floating particles overlay */}
       <div
         style={{
           position: "fixed",
@@ -525,7 +547,8 @@ try {
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(210,150,90,0.65), transparent)",
+            background:
+              "radial-gradient(circle, rgba(210,150,90,0.65), transparent)",
             filter: "blur(1px)",
             animation: "mw-float1 8s ease-in-out infinite",
           }}
@@ -538,7 +561,8 @@ try {
             width: 6,
             height: 6,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(180,120,70,0.55), transparent)",
+            background:
+              "radial-gradient(circle, rgba(180,120,70,0.55), transparent)",
             filter: "blur(1px)",
             animation: "mw-float2 10s ease-in-out infinite",
           }}
@@ -551,7 +575,8 @@ try {
             width: 7,
             height: 7,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(200,140,85,0.60), transparent)",
+            background:
+              "radial-gradient(circle, rgba(200,140,85,0.60), transparent)",
             filter: "blur(1px)",
             animation: "mw-float3 9s ease-in-out infinite",
           }}
@@ -564,7 +589,8 @@ try {
             width: 5,
             height: 5,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(190,130,80,0.50), transparent)",
+            background:
+              "radial-gradient(circle, rgba(190,130,80,0.50), transparent)",
             filter: "blur(1px)",
             animation: "mw-float1 11s ease-in-out infinite 2s",
           }}
@@ -572,7 +598,6 @@ try {
       </div>
 
       <div style={S.shell} className="mw-shell">
-        {/* Shimmer overlay on shell */}
         <div
           style={{
             position: "absolute",
@@ -603,16 +628,16 @@ try {
           </div>
 
           <div style={S.miniStats} className="mw-miniStats">
-            {credits !== null ? (
-              <span style={S.miniPill}>{credits} messages restants</span>
-            ) : (
-              <span style={{ ...S.miniPill, opacity: 0.55 }}>…</span>
-            )}
+            <span style={{ ...S.miniPill, opacity: 0.6 }}>
+              Expérience active
+            </span>
             {isActive !== null ? (
               <span
                 style={{
                   ...S.dot,
-                  background: isActive ? "rgba(60,190,120,1)" : "rgba(255,120,120,1)",
+                  background: isActive
+                    ? "rgba(60,190,120,1)"
+                    : "rgba(255,120,120,1)",
                 }}
               />
             ) : null}
@@ -623,7 +648,6 @@ try {
           <div style={S.heroGlow} className="mw-heroGlow" />
           <div style={S.paperNoise} />
 
-          {/* audio caché */}
           <audio ref={audioRef} src={audioUrl ?? undefined} />
 
           {error ? (
@@ -633,10 +657,79 @@ try {
             </div>
           ) : null}
 
+          {mode === "choice" ? (
+            <div style={S.choiceWrap}>
+              <div style={S.choiceEyebrow}>Grain Atelier</div>
+
+              <div style={S.choiceTitleMain}>
+                Choisissez l’expérience
+                <br />
+                que vous souhaitez ouvrir.
+              </div>
+
+              <div style={S.choiceIntro}>
+                Voix enregistrée pour écouter un message réel, ou Murmures IA pour recevoir un message généré selon votre thème et votre paramétrage.
+              </div>
+
+              <div style={S.choiceButtonsRow}>
+                <button
+                  type="button"
+                  style={S.choiceButtonPrimary}
+                  onClick={openRecordedVoice}
+                >
+                  Voix enregistrée
+                </button>
+
+                <button
+                  type="button"
+                  style={S.choiceButtonSecondary}
+                  onClick={() => {
+                    setError(null);
+                    setMode("ia");
+                  }}
+                >
+                  Murmures IA
+                </button>
+              </div>
+
+            </div>
+          ) : (
+          <>
           <div style={S.messageWrap} className="mw-messageWrap">
+            {!typed && !loading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: "rgba(230,200,170,0.92)",
+                  fontSize: 16,
+                  lineHeight: 1.6,
+                  marginBottom: 8,
+                }}
+              >
+                Un message vous attend…
+              </div>
+            )}
+
+            {loading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: "rgba(220,190,170,0.9)",
+                  fontSize: 15,
+                  lineHeight: 1.6,
+                  marginBottom: 8,
+                }}
+              >
+                Le message arrive…
+              </div>
+            )}
+
             {typed ? (
-              <div key={messageKey} className="mw-messageCard" style={S.messageCard}>
-                {/* Shimmer effect on message card */}
+              <div
+                key={messageKey}
+                className={`mw-messageCard ${isPlaying ? "animate-pulse" : ""}`}
+                style={S.messageCard}
+              >
                 <div
                   style={{
                     position: "absolute",
@@ -657,10 +750,18 @@ try {
                     }}
                   />
                 </div>
-                <div style={{ ...S.messageTitle, position: "relative", zIndex: 1 }} className="mw-messageTitle">
-                  ✨ Ton message
+
+                <div
+                  style={{ ...S.messageTitle, position: "relative", zIndex: 1 }}
+                  className="mw-messageTitle"
+                >
+                  ✨ Un message pour vous
                 </div>
-                <div style={{ ...S.messageText, position: "relative", zIndex: 1 }} className="mw-messageText">
+
+                <div
+                  style={{ ...S.messageText, position: "relative", zIndex: 1 }}
+                  className="mw-messageText"
+                >
                   <span>{typed}</span>
                   <span className="mw-caret" style={S.caret} aria-hidden>
                     ▍
@@ -673,13 +774,30 @@ try {
                   ✦
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <div style={S.placeholderTitle} className="mw-placeholderTitle">
-                    Un murmure t&apos;attend.
+                  <div
+                    style={S.placeholderTitle}
+                    className="mw-placeholderTitle"
+                  >
+                    Un message vous attend.
                   </div>
                   <div style={S.placeholderText} className="mw-placeholderText">
-                    Appuie sur <b>Découvrir</b> pour recevoir ton message.
+                    Appuyez sur <b>Recevoir mon message</b> pour le découvrir.
                   </div>
                 </div>
+              </div>
+            )}
+
+            {typed && !isPlaying && !audioLoading && (
+              <div
+                style={{
+                  textAlign: "center",
+                  marginTop: 14,
+                  fontSize: 13,
+                  color: "rgba(210,185,160,0.78)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Ce message a été créé spécialement pour vous.
               </div>
             )}
           </div>
@@ -695,7 +813,9 @@ try {
                 cursor: loading || !canUse ? "not-allowed" : "pointer",
               }}
             >
-              <span style={{ position: "relative" }}>{loading ? "Création…" : "Découvrir"}</span>
+              <span style={{ position: "relative" }}>
+                {loading ? "Création du message…" : "Recevoir mon message"}
+              </span>
             </button>
 
             <button
@@ -707,9 +827,24 @@ try {
                 opacity: typed && !audioLoading ? 1 : 0.55,
                 cursor: typed && !audioLoading ? "pointer" : "not-allowed",
               }}
-              title="Lecture audio (mp3 via /api/tts)"
+              title="Lecture audio"
             >
               {buttonLabel}
+            </button>
+
+            <button
+              onClick={() => {
+                stopAudio(true);
+                setAudioUrl(null);
+                setTyped("");
+                setMessage("");
+                setError(null);
+                setMode("choice");
+              }}
+              className="mw-btnGhost"
+              style={S.btnGhost}
+            >
+              Retour au choix
             </button>
           </div>
 
@@ -718,29 +853,35 @@ try {
               <div style={S.rechargeCard}>
                 <div style={S.rechargeIcon}>⚡</div>
                 <div style={S.rechargeMeta}>
-                  <div style={S.rechargeTitle}>Crédits épuisés</div>
-                  <div style={S.rechargeText}>Recharge pour continuer à découvrir tes murmures</div>
+                  <div style={S.rechargeTitle}>
+                    Message momentanément indisponible
+                  </div>
+                  <div style={S.rechargeText}>
+                    Une nouvelle activation est nécessaire pour continuer.
+                  </div>
                 </div>
                 <button
-                  onClick={() => window.location.href = `/recharge/${id_bijou}`}
+                  onClick={() => {
+                    window.location.href = `/recharge/${id_bijou}`;
+                  }}
                   style={S.rechargeBtn}
                   className="mw-rechargeBtn"
                 >
-                  Recharger →
+                  Continuer →
                 </button>
               </div>
             </div>
           ) : null}
+          </>
+          )}
         </section>
       </div>
 
-      {/* CSS premium injecté */}
       <PremiumCss />
     </main>
   );
 }
 
-/** CSS premium ULTRA LUXE */
 function PremiumCss() {
   useEffect(() => {
     if (document.getElementById("mw-premium-css")) return;
@@ -757,13 +898,12 @@ function PremiumCss() {
       }
       .mw-messageCard { animation: mw-fadeUp 680ms cubic-bezier(.2,.8,.2,1) both; }
 
-      /* Copper button ULTRA: multi-layer shine sweep + 3D press + glow */
       .mw-btnCopper {
         position: relative;
         overflow: hidden;
         transform: translateZ(0);
-        transition: transform 200ms cubic-bezier(.2,.7,.2,1), 
-                    filter 200ms ease, 
+        transition: transform 200ms cubic-bezier(.2,.7,.2,1),
+                    filter 200ms ease,
                     box-shadow 200ms ease;
       }
       .mw-btnCopper::before{
@@ -772,7 +912,7 @@ function PremiumCss() {
         inset:-100% -80% auto -80%;
         height:220%;
         transform: rotate(-15deg) translateX(-50%);
-        background: 
+        background:
           radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,255,255,0.9), transparent 65%),
           radial-gradient(ellipse 40% 40% at 45% 45%, rgba(255,220,180,0.85), transparent 70%);
         opacity: 0;
@@ -792,8 +932,8 @@ function PremiumCss() {
       .mw-btnCopper:hover{
         transform: translateY(-3px) scale(1.02);
         filter: brightness(1.12) saturate(1.15);
-        box-shadow: 
-          0 32px 80px rgba(180,100,50,0.42), 
+        box-shadow:
+          0 32px 80px rgba(180,100,50,0.42),
           0 16px 40px rgba(0,0,0,0.38),
           inset 0 2px 0 rgba(255,255,255,0.65);
       }
@@ -812,13 +952,12 @@ function PremiumCss() {
       .mw-btnCopper:active{
         transform: translateY(1px) scale(0.98);
         filter: brightness(1.05) saturate(1.08) contrast(1.03);
-        box-shadow: 
-          0 12px 40px rgba(180,100,50,0.32), 
+        box-shadow:
+          0 12px 40px rgba(180,100,50,0.32),
           0 6px 20px rgba(0,0,0,0.28),
           inset 0 -2px 8px rgba(0,0,0,0.18);
       }
 
-      /* Ghost button ULTRA: lift + glow ring */
       .mw-btnGhost{
         position:relative;
         overflow:hidden;
@@ -841,8 +980,8 @@ function PremiumCss() {
       .mw-btnGhost:hover{
         transform: translateY(-2px);
         background: rgba(255,255,255,0.95);
-        box-shadow: 
-          0 20px 50px rgba(180,140,100,0.28), 
+        box-shadow:
+          0 20px 50px rgba(180,140,100,0.28),
           0 10px 30px rgba(0,0,0,0.12);
       }
       .mw-btnGhost:hover::before{
@@ -853,14 +992,13 @@ function PremiumCss() {
         box-shadow: 0 8px 24px rgba(0,0,0,0.08);
       }
 
-      /* Recharge button */
       .mw-rechargeBtn {
         position: relative;
         overflow: hidden;
       }
       .mw-rechargeBtn:hover {
         transform: translateY(-2px);
-        box-shadow: 
+        box-shadow:
           0 20px 50px rgba(255,150,80,0.25),
           0 10px 25px rgba(0,0,0,0.35),
           inset 0 1px 0 rgba(255,230,200,0.4);
@@ -869,7 +1007,6 @@ function PremiumCss() {
         transform: translateY(0px) scale(0.98);
       }
 
-      /* Floating particles effect */
       @keyframes mw-float1 {
         0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
         33% { transform: translate(15px, -20px) scale(1.1); opacity: 0.7; }
@@ -885,20 +1022,18 @@ function PremiumCss() {
         80% { transform: translate(-12px, -15px) scale(0.85); opacity: 0.45; }
       }
 
-      /* Shimmer overlay for cards */
       @keyframes mw-shimmer {
         0% { transform: translateX(-100%) rotate(15deg); }
         100% { transform: translateX(200%) rotate(15deg); }
       }
 
-      /* RESPONSIVE MEDIA QUERIES */
       @media (max-width: 768px) {
         body { --page-pad: 14px; }
         .mw-topBar { flex-direction: column; gap: 14px; }
         h1 { font-size: 26px !important; }
         .mw-actions { flex-direction: column; }
-        .mw-btnCopper, .mw-btnGhost { 
-          width: 100%; 
+        .mw-btnCopper, .mw-btnGhost {
+          width: 100%;
           min-width: auto;
           padding: 14px 16px;
         }
@@ -920,7 +1055,7 @@ function PremiumCss() {
         .mw-miniStats { flex-direction: column; gap: 6px; }
         .mw-messageText { font-size: 16px !important; }
         .mw-messageTitle { font-size: 14px; }
-        .mw-btnCopper, .mw-btnGhost { 
+        .mw-btnCopper, .mw-btnGhost {
           font-size: 13px;
           padding: 12px 14px;
           letter-spacing: 0.1px;
@@ -1012,7 +1147,8 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 36,
     letterSpacing: -0.9,
     lineHeight: 1.05,
-    background: "linear-gradient(135deg, rgba(245,215,180,1) 0%, rgba(210,160,110,1) 100%)",
+    background:
+      "linear-gradient(135deg, rgba(245,215,180,1) 0%, rgba(210,160,110,1) 100%)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
     backgroundClip: "text",
@@ -1025,8 +1161,10 @@ const S: Record<string, React.CSSProperties> = {
     padding: "10px 14px",
     borderRadius: 999,
     border: "1px solid rgba(210,150,90,0.25)",
-    background: "linear-gradient(135deg, rgba(60,40,25,0.70), rgba(48,32,20,0.80))",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.35), " + "inset 0 1px 0 rgba(210,150,90,0.18)",
+    background:
+      "linear-gradient(135deg, rgba(60,40,25,0.70), rgba(48,32,20,0.80))",
+    boxShadow:
+      "0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(210,150,90,0.18)",
   },
   miniPill: {
     fontSize: 12,
@@ -1034,13 +1172,19 @@ const S: Record<string, React.CSSProperties> = {
     letterSpacing: 0.3,
     color: "rgba(220,180,130,0.95)",
   },
-  dot: { width: 10, height: 10, borderRadius: 999, boxShadow: "0 0 0 4px rgba(0,0,0,0.04)" },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    boxShadow: "0 0 0 4px rgba(0,0,0,0.04)",
+  },
   hero: {
     position: "relative",
     marginTop: 8,
     borderRadius: 28,
     border: "1px solid rgba(210,140,70,0.22)",
-    background: "linear-gradient(135deg, rgba(48,32,20,0.70) 0%, rgba(38,25,16,0.85) 100%)",
+    background:
+      "linear-gradient(135deg, rgba(48,32,20,0.70) 0%, rgba(38,25,16,0.85) 100%)",
     boxShadow:
       "0 50px 150px rgba(0,0,0,0.50), " +
       "0 25px 70px rgba(210,140,70,0.12), " +
@@ -1082,18 +1226,114 @@ const S: Record<string, React.CSSProperties> = {
     padding: 16,
     borderRadius: 22,
     border: "1px solid rgba(220,100,80,0.35)",
-    background: "linear-gradient(135deg, rgba(80,35,25,0.65), rgba(65,28,20,0.75))",
-    boxShadow: "0 24px 70px rgba(0,0,0,0.35), " + "inset 0 1px 0 rgba(220,120,100,0.15)",
+    background:
+      "linear-gradient(135deg, rgba(80,35,25,0.65), rgba(65,28,20,0.75))",
+    boxShadow:
+      "0 24px 70px rgba(0,0,0,0.35), inset 0 1px 0 rgba(220,120,100,0.15)",
     marginBottom: 16,
   },
-  alertTitle: { fontWeight: 950, marginBottom: 7, color: "rgba(240,160,140,1)" },
-  alertText: { opacity: 0.88, color: "rgba(220,190,170,0.95)" },
-  messageWrap: { position: "relative", zIndex: 1, display: "grid", gap: 12, minHeight: 220 },
+  alertTitle: {
+    fontWeight: 950,
+    marginBottom: 7,
+    color: "rgba(240,160,140,1)",
+  },
+  alertText: {
+    opacity: 0.88,
+    color: "rgba(220,190,170,0.95)",
+  },
+  choiceWrap: {
+    position: "relative",
+    zIndex: 1,
+    display: "grid",
+    gap: 20,
+    justifyItems: "center",
+    textAlign: "center",
+    padding: "36px 10px 20px",
+  },
+  choiceEyebrow: {
+    fontSize: 12,
+    letterSpacing: 6,
+    textTransform: "uppercase",
+    color: "rgba(205,175,145,0.62)",
+    fontWeight: 600,
+  },
+  choiceTitleMain: {
+    fontSize: 52,
+    lineHeight: 1.14,
+    letterSpacing: -0.8,
+    color: "rgba(243,236,228,0.98)",
+    maxWidth: 760,
+    textShadow: "0 8px 30px rgba(0,0,0,0.35)",
+  },
+  choiceIntro: {
+    textAlign: "center",
+    color: "rgba(223,203,182,0.88)",
+    fontSize: 22,
+    lineHeight: 1.55,
+    maxWidth: 820,
+    margin: "0 auto",
+  },
+  choiceButtonsRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 14,
+    marginTop: 8,
+  },
+  choiceButtonPrimary: {
+    appearance: "none",
+    borderRadius: 999,
+    border: "1px solid rgba(220,190,160,0.26)",
+    background:
+      "linear-gradient(135deg, rgba(245,224,196,0.96) 0%, rgba(228,196,158,0.96) 100%)",
+    color: "rgba(45,28,16,0.95)",
+    fontSize: 14,
+    fontWeight: 800,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    padding: "16px 28px",
+    minWidth: 270,
+    cursor: "pointer",
+    boxShadow:
+      "0 18px 46px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,245,225,0.82)",
+  },
+  choiceButtonSecondary: {
+    appearance: "none",
+    borderRadius: 999,
+    border: "1px solid rgba(220,190,160,0.22)",
+    background:
+      "linear-gradient(135deg, rgba(75,55,42,0.64) 0%, rgba(58,41,30,0.74) 100%)",
+    color: "rgba(233,218,202,0.95)",
+    fontSize: 14,
+    fontWeight: 700,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    padding: "16px 28px",
+    minWidth: 230,
+    cursor: "pointer",
+    boxShadow:
+      "0 18px 46px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.12)",
+  },
+  choiceFootnote: {
+    textAlign: "center",
+    color: "rgba(206,182,156,0.7)",
+    fontSize: 14,
+    lineHeight: 1.6,
+    marginTop: 6,
+  },
+  messageWrap: {
+    position: "relative",
+    zIndex: 1,
+    display: "grid",
+    gap: 12,
+    minHeight: 220,
+  },
   messageCard: {
     position: "relative",
     borderRadius: 28,
     border: "1px solid rgba(210,150,90,0.28)",
-    background: "linear-gradient(135deg, rgba(55,38,25,0.85) 0%, rgba(45,30,20,0.92) 100%)",
+    background:
+      "linear-gradient(135deg, rgba(55,38,25,0.85) 0%, rgba(45,30,20,0.92) 100%)",
     boxShadow:
       "0 60px 160px rgba(0,0,0,0.45), " +
       "0 30px 80px rgba(210,140,70,0.10), " +
@@ -1119,7 +1359,12 @@ const S: Record<string, React.CSSProperties> = {
     color: "rgba(235,215,195,0.98)",
     textShadow: "0 1px 3px rgba(0,0,0,0.3)",
   },
-  caret: { display: "inline-block", marginLeft: 2, opacity: 0.65, color: "rgba(210,160,110,0.95)" },
+  caret: {
+    display: "inline-block",
+    marginLeft: 2,
+    opacity: 0.65,
+    color: "rgba(210,160,110,0.95)",
+  },
   placeholder: {
     display: "flex",
     alignItems: "center",
@@ -1127,8 +1372,10 @@ const S: Record<string, React.CSSProperties> = {
     padding: 22,
     borderRadius: 28,
     border: "1px solid rgba(210,150,90,0.22)",
-    background: "linear-gradient(135deg, rgba(48,32,20,0.65), rgba(38,25,16,0.75))",
-    boxShadow: "0 32px 80px rgba(0,0,0,0.32), " + "inset 0 1px 0 rgba(210,150,90,0.12)",
+    background:
+      "linear-gradient(135deg, rgba(48,32,20,0.65), rgba(38,25,16,0.75))",
+    boxShadow:
+      "0 32px 80px rgba(0,0,0,0.32), inset 0 1px 0 rgba(210,150,90,0.12)",
   },
   placeholderMark: {
     width: 52,
@@ -1147,20 +1394,30 @@ const S: Record<string, React.CSSProperties> = {
       "inset 0 2px 0 rgba(255,220,180,0.45)",
     flex: "0 0 auto",
   },
-  placeholderTitle: { fontWeight: 950, fontSize: 17, color: "rgba(230,200,170,1)" },
-  placeholderText: { opacity: 0.82, lineHeight: 1.48, color: "rgba(210,185,160,0.95)" },
-  actions: { position: "relative", zIndex: 1, display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 },
+  placeholderTitle: {
+    fontWeight: 950,
+    fontSize: 17,
+    color: "rgba(230,200,170,1)",
+  },
+  placeholderText: {
+    opacity: 0.82,
+    lineHeight: 1.48,
+    color: "rgba(210,185,160,0.95)",
+  },
+  actions: {
+    position: "relative",
+    zIndex: 1,
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+    marginTop: 16,
+  },
   btnCopper: {
     padding: "16px 24px",
     borderRadius: 20,
     border: "2px solid rgba(140,85,45,0.55)",
     background:
-      "linear-gradient(135deg, " +
-      "rgba(220,160,100,1) 0%, " +
-      "rgba(190,130,75,1) 25%, " +
-      "rgba(160,100,55,1) 50%, " +
-      "rgba(140,85,45,1) 75%, " +
-      "rgba(120,70,35,1) 100%)",
+      "linear-gradient(135deg, rgba(220,160,100,1) 0%, rgba(190,130,75,1) 25%, rgba(160,100,55,1) 50%, rgba(140,85,45,1) 75%, rgba(120,70,35,1) 100%)",
     boxShadow:
       "0 28px 75px rgba(180,100,50,0.35), " +
       "0 14px 40px rgba(0,0,0,0.35), " +
@@ -1177,26 +1434,15 @@ const S: Record<string, React.CSSProperties> = {
     padding: "16px 22px",
     borderRadius: 20,
     border: "1px solid rgba(210,150,90,0.28)",
-    background: "linear-gradient(135deg, rgba(55,38,25,0.75), rgba(45,30,20,0.85))",
-    boxShadow: "0 18px 50px rgba(0,0,0,0.28), " + "inset 0 1px 0 rgba(210,150,90,0.18)",
+    background:
+      "linear-gradient(135deg, rgba(55,38,25,0.75), rgba(45,30,20,0.85))",
+    boxShadow:
+      "0 18px 50px rgba(0,0,0,0.28), inset 0 1px 0 rgba(210,150,90,0.18)",
     fontWeight: 900,
     letterSpacing: 0.3,
     fontSize: 14,
     color: "rgba(220,180,130,0.98)",
     textShadow: "0 1px 3px rgba(0,0,0,0.4)",
-  },
-  rechargeHint: {
-    position: "relative",
-    zIndex: 1,
-    marginTop: 16,
-    padding: 14,
-    borderRadius: 20,
-    border: "1px solid rgba(210,140,70,0.18)",
-    background: "rgba(60,40,25,0.45)",
-    opacity: 0.88,
-    fontWeight: 650,
-    color: "rgba(210,175,140,0.95)",
-    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
   },
   rechargeContainer: {
     position: "relative" as const,
@@ -1209,7 +1455,8 @@ const S: Record<string, React.CSSProperties> = {
     padding: 18,
     borderRadius: 22,
     border: "1.5px solid rgba(255,150,80,0.35)",
-    background: "linear-gradient(135deg, rgba(80,45,25,0.85), rgba(65,35,15,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(80,45,25,0.85), rgba(65,35,15,0.92))",
     boxShadow:
       "0 28px 70px rgba(255,150,80,0.12), " +
       "0 14px 40px rgba(0,0,0,0.35), " +
@@ -1241,7 +1488,8 @@ const S: Record<string, React.CSSProperties> = {
     padding: "12px 20px",
     borderRadius: 16,
     border: "1.5px solid rgba(255,150,80,0.45)",
-    background: "linear-gradient(135deg, rgba(255,160,90,0.95), rgba(220,130,60,0.95))",
+    background:
+      "linear-gradient(135deg, rgba(255,160,90,0.95), rgba(220,130,60,0.95))",
     fontWeight: 950,
     letterSpacing: 0.3,
     fontSize: 13,

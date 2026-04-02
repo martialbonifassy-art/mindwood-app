@@ -37,3 +37,13 @@ ADD COLUMN IF NOT EXISTS enregistreur_nom TEXT,
 ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT TRUE,
 ADD COLUMN IF NOT EXISTS lectures_restantes INTEGER DEFAULT 10,
 ADD COLUMN IF NOT EXISTS lectures_totales INTEGER DEFAULT 0;
+
+-- Nettoyer les doublons existants: on garde la voix la plus récente par bijou
+DELETE FROM voix_enregistrees a
+USING voix_enregistrees b
+WHERE a.id_bijou = b.id_bijou
+  AND a.created_at < b.created_at;
+
+-- Garantir une seule voix finale par bijou
+CREATE UNIQUE INDEX IF NOT EXISTS idx_voix_enregistrees_unique_bijou
+ON voix_enregistrees(id_bijou);

@@ -35,41 +35,58 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Webhook signature verification failed";
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Webhook signature verification failed";
+
     console.error("Webhook error:", message);
+
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  // Gérer l'événement
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    const id_bijou = session.metadata?.id_bijou;
-    const credits = parseInt(session.metadata?.credits || "0", 10);
-    const kind = session.metadata?.kind === "lectures" ? "lectures" : "credits";
+    // Priorité au client_reference_id envoyé depuis le lien Stripe
+    const id_bijou =
+      session.client_reference_id || session.metadata?.id_bijou || null;
 
-    if (!id_bijou || !credits) {
-      console.error("Metadata manquantes dans la session Stripe:", session.id);
+    // Si metadata.credits absent, on recharge 10 par défaut
+    const credits = Number.parseInt(session.metadata?.credits || "10", 10);
+
+    if (!id_bijou || !credits || credits <= 0) {
+      console.error("Metadata/session invalides dans la session Stripe:", {
+        sessionId: session.id,
+        id_bijou,
+        credits,
+        client_reference_id: session.client_reference_id,
+        metadata: session.metadata,
+      });
+
       return NextResponse.json(
         { error: "Metadata invalides" },
         { status: 400 }
       );
     }
 
-    // Ajouter les crédits ou lectures
     try {
+      const kind = session.metadata?.kind === "lectures" ? "lectures" : "credits";
+
       if (kind === "lectures") {
+        // Recharge voix_enregistrees.lectures_restantes
         const { data: voix, error: fetchError } = await supabase
           .from("voix_enregistrees")
-          .select("id,lectures_restantes")
+          .select("id, lectures_restantes")
           .eq("id_bijou", id_bijou)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (fetchError) throw fetchError;
+        if (!voix) throw new Error(`Aucune voix trouvée pour le bijou ${id_bijou}`);
 
-        const nouvellesLectures = (voix?.lectures_restantes || 0) + credits;
+        const nouvellesLectures = (voix.lectures_restantes || 0) + credits;
 
         const { error: updateError } = await supabase
           .from("voix_enregistrees")
@@ -82,9 +99,10 @@ export async function POST(req: Request) {
           `✅ Paiement confirmé: ${credits} lectures ajoutées au bijou ${id_bijou} (total: ${nouvellesLectures})`
         );
       } else {
+        // Recharge bijoux.credits_restants (murmures IA)
         const { data: bijou, error: fetchError } = await supabase
           .from("bijoux")
-          .select("credits_restants")
+          .select("id_bijou, credits_restants, actif, est_active")
           .eq("id_bijou", id_bijou)
           .single();
 
@@ -96,7 +114,8 @@ export async function POST(req: Request) {
           .from("bijoux")
           .update({
             credits_restants: nouveauxCredits,
-            actif: true // Réactiver le bijou si nécessaire
+            actif: true,
+            est_active: true,
           })
           .eq("id_bijou", id_bijou);
 
@@ -107,23 +126,27 @@ export async function POST(req: Request) {
         );
       }
 
-      // Optionnel: Enregistrer la transaction
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        id_bijou,
-        type: kind === "lectures" ? "recharge_lectures" : "recharge",
-        credits,
-        montant: session.amount_total ? session.amount_total / 100 : 0,
-        stripe_session_id: session.id,
-        stripe_payment_status: session.payment_status,
-      });
-      
-      if (transactionError) {
-        // Ne pas faire échouer si la table transactions n'existe pas
-        console.warn("Transaction log failed (table may not exist):", transactionError);
-      }
+      // Optionnel : enregistrer la transaction
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          id_bijou,
+          type: "recharge_ecoutes",
+          credits,
+          montant: session.amount_total ? session.amount_total / 100 : 0,
+          stripe_session_id: session.id,
+          stripe_payment_status: session.payment_status,
+        });
 
+      if (transactionError) {
+        console.warn(
+          "Transaction log failed (table may not exist):",
+          transactionError
+        );
+      }
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout des crédits:", error);
+
       return NextResponse.json(
         { error: "Erreur lors de l'ajout des crédits" },
         { status: 500 }

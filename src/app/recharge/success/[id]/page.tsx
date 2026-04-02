@@ -1,75 +1,88 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { getLocaleFromHost, useTranslations } from "@/lib/i18n";
+import { useEffect, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
-type PageProps = {
-  params: { id: string };
-};
+export default function RechargeSuccessPage() {
+  const params = useParams<{ id: string }>()
+  const id = params?.id
+  const searchParams = useSearchParams()
+  const session_id = searchParams.get('session_id')
+  const router = useRouter()
 
-export default function RechargeSuccessPage({ params }: PageProps) {
-  const id_bijou = params.id;
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
-  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
-
-  // Detect locale from hostname
-  const [locale, setLocale] = useState<"fr" | "en">("fr");
-  useEffect(() => {
-    setLocale(getLocaleFromHost(window.location.hostname));
-  }, []);
-  const t = useTranslations(locale);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [message, setMessage] = useState('Activation des écoutes en cours…')
 
   useEffect(() => {
-    const confirm = async () => {
-      if (!sessionId) {
-        setStatus("done");
-        return;
-      }
+    if (!session_id || !id) {
+      setStatus('error')
+      setMessage('Paramètres manquants. Revenez à la page précédente.')
+      return
+    }
 
+    async function confirm() {
       try {
-        const res = await fetch("/api/stripe/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Confirmation impossible");
+        const res = await fetch('/api/stripe/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session_id }),
+        })
+        const json = await res.json()
+        if (!res.ok || !json.ok) {
+          throw new Error(json.error || 'Erreur inconnue')
         }
-
-        setStatus("done");
+        setStatus('success')
+        setMessage('Les écoutes ont été activées. Redirection…')
+        setTimeout(() => {
+          router.replace(`/listen/recorded/${id}`)
+        }, 1800)
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Erreur inconnue";
-        setError(message);
-        setStatus("error");
+        setStatus('error')
+        setMessage(
+          err instanceof Error ? err.message : 'Impossible de confirmer le paiement.'
+        )
       }
-    };
+    }
 
-    confirm();
-  }, [sessionId]);
+    void confirm()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session_id, id])
 
   return (
-    <main className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-6">
-      <div className="max-w-lg w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-8 text-center">
-        <div className="text-4xl mb-4">✨</div>
-        <h1 className="text-2xl font-semibold mb-3">{t.success.title}</h1>
-        <p className="text-slate-300 mb-6">
-          {t.success.message}
-          <br />
-          {t.success.subtitle}
-        </p>
-        {status === "loading" && (
-          <div className="text-slate-400 text-sm mb-4">{locale === "fr" ? "Vérification du paiement..." : "Verifying payment..."}</div>
+    <main className="min-h-screen bg-[#120d0a] text-stone-100 flex items-center justify-center px-6">
+      <div className="max-w-2xl text-center">
+        <p className="mb-6 text-xs uppercase tracking-[0.35em] text-stone-500">Grain Atelier</p>
+
+        {status === 'loading' && (
+          <>
+            <div className="mx-auto mb-8 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+            <h1 className="text-3xl md:text-5xl leading-[1.3]">
+              Le message reprend vie.
+            </h1>
+            <p className="mt-6 text-base leading-8 text-stone-400">{message}</p>
+          </>
         )}
-        {status === "error" && (
-          <div className="text-red-400 text-sm mb-4">{error}</div>
+
+        {status === 'success' && (
+          <>
+            <h1 className="text-3xl md:text-5xl leading-[1.3]">C'est fait.</h1>
+            <p className="mt-6 text-base leading-8 text-stone-300">{message}</p>
+          </>
         )}
-        <div className="h-1 bg-linear-to-r from-pink-500 to-rose-500 rounded-full" />
+
+        {status === 'error' && (
+          <>
+            <h1 className="text-3xl md:text-5xl leading-[1.3]">Un problème est survenu.</h1>
+            <p className="mt-6 text-base leading-8 text-stone-400">{message}</p>
+            <button
+              onClick={() => router.push('/')}
+              className="mt-10 inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm tracking-[0.24em] text-stone-100 uppercase backdrop-blur-sm transition hover:bg-white/14"
+            >
+              Revenir au site
+            </button>
+          </>
+        )}
       </div>
     </main>
-  );
+  )
 }
