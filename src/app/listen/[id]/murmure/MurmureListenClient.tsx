@@ -40,6 +40,7 @@ const softButton =
   "inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm tracking-[0.24em] text-stone-100 uppercase backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40";
 const COPY = {
   fr: {
+    arrivalText: "Ce bijou contient quelque chose pour vous.",
     listeningLabel: "Écoute…",
     preludeText: "Prenez un instant.",
     errUnavailable: "Ce murmure est indisponible.",
@@ -100,6 +101,7 @@ const COPY = {
     retryBtn: "Réessayer",
   },
   en: {
+    arrivalText: "This jewel contains something for you.",
     listeningLabel: "Listening…",
     preludeText: "Take a moment.",
     errUnavailable: "This whisper is unavailable.",
