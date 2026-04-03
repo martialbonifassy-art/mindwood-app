@@ -6,21 +6,19 @@ import type { Locale } from "@/lib/i18n";
 
 const copy = {
   fr: {
-    subtitle: "Choisissez le mode de creation du bijou.",
+    subtitle: "Saisissez l'identifiant du bijou pour ouvrir l'experience.",
     idLabel: "Identifiant du bijou",
     idPlaceholder: "ex: fe3cb1ef-9898-4dab-b99c-47df816431e7",
     emptyError: "Entrez un identifiant de bijou pour continuer.",
-    recorded: "Voix enregistree",
-    murmures: "Murmures IA",
+    continue: "Ouvrir le bijou",
     hint: "Le domaine .fr affiche la version francaise.",
   },
   en: {
-    subtitle: "Choose how this jewel will be created.",
+    subtitle: "Enter the jewel identifier to open the experience.",
     idLabel: "Jewel identifier",
     idPlaceholder: "e.g. fe3cb1ef-9898-4dab-b99c-47df816431e7",
     emptyError: "Enter a jewel identifier to continue.",
-    recorded: "Recorded voice",
-    murmures: "AI whispers",
+    continue: "Open the jewel",
     hint: "The .com domain shows the English version.",
   },
 } as const;
@@ -36,7 +34,7 @@ export default function HomeClient({ locale }: HomeClientProps) {
 
   const t = copy[locale];
 
-  function navigateTo(mode: "recorded" | "murmures") {
+  function navigateToListen() {
     const id = bijouId.trim();
     if (!id) {
       setError(t.emptyError);
@@ -44,12 +42,7 @@ export default function HomeClient({ locale }: HomeClientProps) {
     }
 
     setError("");
-    if (mode === "recorded") {
-      router.push(`/setup/${id}/firstname`);
-      return;
-    }
-
-    router.push(`/setup/${id}/murmures`);
+    router.push(`/listen/${id}`);
   }
 
   return (
@@ -71,16 +64,10 @@ export default function HomeClient({ locale }: HomeClientProps) {
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              onClick={() => navigateTo("recorded")}
+              onClick={navigateToListen}
               className="inline-flex items-center rounded-xl bg-[#c88952] px-4 py-2 font-semibold text-[#1f130c] hover:brightness-105"
             >
-              {t.recorded}
-            </button>
-            <button
-              onClick={() => navigateTo("murmures")}
-              className="inline-flex items-center rounded-xl border border-[#8b633e] px-4 py-2 font-semibold text-[#e5c9a8] hover:bg-[#2a1c12]"
-            >
-              {t.murmures}
+              {t.continue}
             </button>
           </div>
 
