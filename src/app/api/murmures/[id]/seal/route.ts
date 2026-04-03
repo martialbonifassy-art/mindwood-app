@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getLocaleFromHost } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,9 @@ export async function POST(req: Request, context: RouteContext) {
     const relationshipType = clean(body.relationshipType);
     const theme = clean(body.theme);
     const themeLabel = clean(body.themeLabel) || theme;
-    const language = clean(body.language).toLowerCase().startsWith("en") ? "en" : "fr";
+    const host = req.headers.get("host");
+    const fallbackLanguage = clean(body.language).toLowerCase().startsWith("en") ? "en" : "fr";
+    const language = host ? getLocaleFromHost(host) : fallbackLanguage;
     const voice = clean(body.voice) || "feminin";
     const tone = clean(body.tone);
     const emotionalIntensity = clean(body.emotionalIntensity);
@@ -183,6 +186,7 @@ export async function POST(req: Request, context: RouteContext) {
       .from("bijoux")
       .update({
         type_bijou: "murmures_IA",
+        langue: language,
         credits_restants: 10,
         actif: true,
         est_active: true,

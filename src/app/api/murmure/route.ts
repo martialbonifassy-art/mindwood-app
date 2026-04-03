@@ -46,14 +46,16 @@ async function generateMessage(params: {
 - Warm and encouraging tone
 - Never mention the theme/subtheme by name
 - Use "you" to address the person
-- 5-7 sentences maximum`
+- 5-7 sentences maximum
+- Write strictly in English only`
       : `Tu es un créateur de messages chaleureux et sages. Génère un message clair et personnel (5-7 phrases) qui est facile à comprendre et agréable à écouter. Le message doit :
 - Être clair et direct, pas trop métaphorique
 - Utiliser un vocabulaire simple, accessible à tous
 - Avoir un ton chaleureux et encourageant
 - Ne jamais citer le thème/sous-thème par leur nom
 - Utiliser le tutoiement
-- 5-7 phrases maximum`;
+- 5-7 phrases maximum
+- Écrire strictement en français uniquement`;
 
   const userPrompt =
     langue === "en"
@@ -63,14 +65,14 @@ Subtheme (do not mention explicitly): ${sous_theme}
 ${lieu ? `Place of significance: ${lieu}` : ""}
 ${souvenir ? `Memory context: ${souvenir}` : ""}
 
-Generate a clear, warm message that speaks directly to their situation. Use simple words and short sentences. Be encouraging and genuine. Start with "${prenom},"`
+Generate a clear, warm message that speaks directly to their situation. Use simple words and short sentences. Be encouraging and genuine. Start with "${prenom}," and respond in English only.`
       : `Crée un message personnel pour ${prenom}.
 Contexte thématique (ne pas mentionner explicitement) : ${theme}
 Sous-thème (ne pas mentionner explicitement) : ${sous_theme}
 ${lieu ? `Lieu significatif : ${lieu}` : ""}
 ${souvenir ? `Contexte de souvenir : ${souvenir}` : ""}
 
-Génère un message clair et chaleureux qui parle directement à sa situation. Utilise des mots simples et des phrases courtes. Sois encourageant et authentique. Commence par "${prenom},"`;
+Génère un message clair et chaleureux qui parle directement à sa situation. Utilise des mots simples et des phrases courtes. Sois encourageant et authentique. Commence par "${prenom}," et réponds uniquement en français.`;
 
   try {
     const completion = await openai.chat.completions.create({
