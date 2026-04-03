@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { getLocaleFromHost, type Locale } from "@/lib/i18n";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-01-28.clover",
@@ -13,18 +14,41 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
 });
 
+const COPY: Record<Locale, {
+  missingSessionId: string;
+  paymentNotConfirmed: string;
+  invalidMetadata: string;
+  stripeError: string;
+}> = {
+  fr: {
+    missingSessionId: "sessionId manquant",
+    paymentNotConfirmed: "Paiement non confirmé",
+    invalidMetadata: "Metadata invalides",
+    stripeError: "Erreur Stripe",
+  },
+  en: {
+    missingSessionId: "Missing sessionId",
+    paymentNotConfirmed: "Payment not confirmed",
+    invalidMetadata: "Invalid metadata",
+    stripeError: "Stripe error",
+  },
+};
+
 export async function POST(req: Request) {
+  const locale = getLocaleFromHost(req.headers.get("host"));
+  const c = COPY[locale];
+
   try {
     const { sessionId } = (await req.json()) as { sessionId?: string };
 
     if (!sessionId) {
-      return NextResponse.json({ error: "sessionId manquant" }, { status: 400 });
+      return NextResponse.json({ error: c.missingSessionId }, { status: 400 });
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status !== "paid") {
-      return NextResponse.json({ error: "Paiement non confirmé" }, { status: 400 });
+      return NextResponse.json({ error: c.paymentNotConfirmed }, { status: 400 });
     }
 
     const id_bijou = session.metadata?.id_bijou;
@@ -32,7 +56,7 @@ export async function POST(req: Request) {
     const kind = session.metadata?.kind === "lectures" ? "lectures" : "credits";
 
     if (!id_bijou || !credits) {
-      return NextResponse.json({ error: "Metadata invalides" }, { status: 400 });
+      return NextResponse.json({ error: c.invalidMetadata }, { status: 400 });
     }
 
     // Idempotency: if this session was already processed, return current value without updating
@@ -149,7 +173,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, kind, total: nouveauxCredits });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erreur Stripe";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Stripe confirm error:", error);
+    return NextResponse.json({ error: c.stripeError }, { status: 500 });
   }
 }
