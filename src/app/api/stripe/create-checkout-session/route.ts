@@ -60,9 +60,12 @@ export async function POST(req: Request) {
 
     const amount = PACKAGES[body.credits as 10 | 20];
 
-    const requestOrigin = new URL(req.url).origin;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : requestOrigin);
+    const reqUrl = new URL(req.url);
+    const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const forwardedProto = req.headers.get("x-forwarded-proto") || reqUrl.protocol.replace(":", "");
+    const requestOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : reqUrl.origin;
+    const baseUrl = requestOrigin || process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : reqUrl.origin);
 
     // Créer une session Checkout
     const session = await stripe.checkout.sessions.create({
