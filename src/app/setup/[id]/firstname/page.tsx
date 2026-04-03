@@ -58,6 +58,11 @@ export default function SetupFirstNamePage() {
           throw new Error(json.error || 'Impossible de charger ce bijou.')
         }
 
+        if (json.data.type_bijou === 'murmures_IA') {
+          router.replace(`/setup/${id}/mode-scelle?mode=recorded`)
+          return
+        }
+
         if (!isMounted) return
 
         setFirstName(json.data.prenom ?? '')
@@ -77,7 +82,7 @@ export default function SetupFirstNamePage() {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, router])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

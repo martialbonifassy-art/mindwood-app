@@ -46,7 +46,6 @@ INSERT INTO bijoux (
   id_bijou,
   id_user,
   destinataire_prenom,
-  type_bijou,
   langue,
   credits_restants,
   actif
@@ -54,11 +53,15 @@ INSERT INTO bijoux (
   gen_random_uuid(),
   'your-user-id',
   'Jean',
-  'voix_enregistree',  -- Important!
   'fr',
   5,
   true
 );
+
+-- Le type_bijou reste vide a la creation.
+-- Il sera fixe automatiquement lors du premier scellement:
+--   - voix_enregistree si enregistrement final
+--   - murmures_IA si scellement Murmures
 
 -- Copier l'id_bijou généré pour tester
 ```

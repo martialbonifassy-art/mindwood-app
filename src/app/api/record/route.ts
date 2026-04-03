@@ -27,6 +27,43 @@ export async function POST(req: Request) {
     }
 
     if (isFinal) {
+      const { data: bijouData, error: bijouError } = await supabase
+        .from("bijoux")
+        .select("id_bijou, type_bijou")
+        .eq("id_bijou", id_bijou)
+        .maybeSingle()
+
+      if (bijouError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Erreur lecture du bijou",
+          },
+          { status: 500 }
+        )
+      }
+
+      if (!bijouData) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Bijou introuvable",
+          },
+          { status: 404 }
+        )
+      }
+
+      if (bijouData.type_bijou === "murmures_IA") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Ce bijou est deja scelle en Murmures IA. La voix enregistree n'est plus disponible.",
+          },
+          { status: 409 }
+        )
+      }
+
       const { data: existingVoice, error: existingVoiceError } = await supabase
         .from("voix_enregistrees")
         .select("id, is_locked")
@@ -118,6 +155,26 @@ export async function POST(req: Request) {
             success: false,
             error: "Erreur base de données",
             details: upsertError.message,
+          },
+          { status: 500 }
+        )
+      }
+
+      const { error: sealBijouError } = await supabase
+        .from("bijoux")
+        .update({
+          type_bijou: "voix_enregistree",
+          actif: true,
+          est_active: true,
+        })
+        .eq("id_bijou", id_bijou)
+
+      if (sealBijouError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Impossible de sceller le bijou en voix enregistree",
+            details: sealBijouError.message,
           },
           { status: 500 }
         )

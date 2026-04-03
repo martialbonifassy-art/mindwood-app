@@ -11,8 +11,12 @@ type Body = {
   voix?: "masculin" | "feminin" | string;
 };
 
-function clean(v: any) {
+function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error ?? "Unknown error");
 }
 
 function normalizeLang(langue: string) {
@@ -87,7 +91,7 @@ Génère un message clair et chaleureux qui parle directement à sa situation. U
     }
     
     return text;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("OpenAI API error:", error);
     // Fallback message
     return langue === "en"
@@ -117,10 +121,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ text });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error in murmure route:", e);
     return NextResponse.json(
-      { error: e?.message ?? "Erreur génération texte." },
+      { error: getErrorMessage(e) || "Erreur génération texte." },
       { status: 500 }
     );
   }

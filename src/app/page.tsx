@@ -36,7 +36,7 @@ export default function Home() {
       <div style={S.shell}>
         <div style={S.shimmer} />
 
-        <div style={S.brand}>ATELIER DES LIENS INVISIBLES</div>
+        <div style={S.brand}>Grain atelier</div>
         <h1 style={S.h1}>Mindwood</h1>
         <p style={S.subtitle}>
           Une vitrine lumineuse et intime pour révéler le murmure de votre bijou.

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 
 type BijouRow = {
   id_bijou: string;
@@ -28,29 +27,29 @@ export default function RechargeClient() {
   const [processing, setProcessing] = useState(false);
   const [rechargeType, setRechargeType] = useState<"lectures" | "credits">("credits");
 
+  const isMurmuresIa =
+    bijou?.type_bijou === "murmures_ia" || bijou?.type_bijou === "murmures_IA";
+
   useEffect(() => {
     async function loadData() {
       try {
-        const { data, error: err } = await supabase
-          .from("bijoux")
-          .select("id_bijou,credits_restants,actif,type_bijou")
-          .eq("id_bijou", id_bijou)
-          .single();
+        const res = await fetch(`/api/recharge/${id_bijou}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
 
-        if (err) throw err;
-        setBijou(data as BijouRow);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json?.success || !json?.data?.bijou) {
+          throw new Error(json?.error || "Erreur lors du chargement");
+        }
+
+        const data = json.data.bijou as BijouRow;
+        const voixData = (json.data.voix ?? null) as VoixEnregistree | null;
+
+        setBijou(data);
 
         // Si c'est une voix_enregistree, charger aussi les infos de lectures
         if (data?.type_bijou === "voix_enregistree") {
-          const { data: voixData, error: voixErr } = await supabase
-            .from("voix_enregistrees")
-            .select("*")
-            .eq("id_bijou", id_bijou)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-
-          if (voixErr) throw voixErr;
           setVoix(voixData);
           setRechargeType("lectures");
         }
@@ -191,7 +190,11 @@ export default function RechargeClient() {
                   </p>
                 </div>
                 <button
-                  onClick={() => router.push(`/setup/${id_bijou}`)}
+                  onClick={() =>
+                    isMurmuresIa
+                      ? router.push(`/setup/${id_bijou}/murmures`)
+                      : router.push(`/setup/${id_bijou}`)
+                  }
                   disabled={processing}
                   style={S.modifyBtn}
                 >
@@ -205,7 +208,9 @@ export default function RechargeClient() {
               onClick={() =>
                 rechargeType === "lectures"
                   ? router.push(`/listen/recorded/${id_bijou}`)
-                  : router.push(`/listen/${id_bijou}`)
+                  : isMurmuresIa
+                    ? router.push(`/listen/${id_bijou}/murmure`)
+                    : router.push(`/listen/${id_bijou}`)
               }
               style={S.backBtn}
             >

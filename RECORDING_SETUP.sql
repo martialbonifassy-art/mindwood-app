@@ -1,7 +1,15 @@
 -- Tables pour le système d'enregistrement vocal
 
+-- IMPORTANT: le type du bijou doit etre choisi par le client au moment du scellement,
+-- pas au moment de la creation initiale en base.
+ALTER TABLE bijoux
+  ALTER COLUMN type_bijou DROP NOT NULL;
+
+ALTER TABLE bijoux
+  ALTER COLUMN type_bijou DROP DEFAULT;
+
 -- 1. Sessions d'enregistrement (tracking des essais et statut)
-CREATE TABLE recording_sessions (
+CREATE TABLE IF NOT EXISTS recording_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_bijou TEXT NOT NULL REFERENCES bijoux(id_bijou) ON DELETE CASCADE,
   enregistreur_nom TEXT,
@@ -17,7 +25,7 @@ CREATE TABLE recording_sessions (
 );
 
 -- 2. Brouillons temporaires (les essais avant validation)
-CREATE TABLE recording_drafts (
+CREATE TABLE IF NOT EXISTS recording_drafts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_bijou TEXT NOT NULL REFERENCES bijoux(id_bijou) ON DELETE CASCADE,
   audio_url TEXT NOT NULL,
@@ -27,9 +35,9 @@ CREATE TABLE recording_drafts (
 );
 
 -- Indexs pour performance
-CREATE INDEX idx_recording_sessions_bijou ON recording_sessions(id_bijou);
-CREATE INDEX idx_recording_drafts_bijou ON recording_drafts(id_bijou);
-CREATE INDEX idx_recording_drafts_expires ON recording_drafts(expires_at);
+CREATE INDEX IF NOT EXISTS idx_recording_sessions_bijou ON recording_sessions(id_bijou);
+CREATE INDEX IF NOT EXISTS idx_recording_drafts_bijou ON recording_drafts(id_bijou);
+CREATE INDEX IF NOT EXISTS idx_recording_drafts_expires ON recording_drafts(expires_at);
 
 -- Mettre à jour voix_enregistrees pour ajouter des infos utiles
 ALTER TABLE voix_enregistrees 

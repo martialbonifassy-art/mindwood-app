@@ -91,6 +91,20 @@ export async function POST(req: Request) {
         stripe_payment_status: session.payment_status,
       }).then(() => {/* log only, errors non-blocking */});
 
+      await supabase
+        .from("bijou_usage_events")
+        .insert({
+          bijou_id: id_bijou,
+          event_type: "recharge",
+          delta: credits,
+          metadata: {
+            kind,
+            source: "stripe_confirm",
+            stripe_session_id: sessionId,
+          },
+        })
+        .then(() => {/* log only, errors non-blocking */});
+
       return NextResponse.json({ ok: true, kind, total: nouvellesLectures });
     }
 
@@ -118,6 +132,20 @@ export async function POST(req: Request) {
       stripe_session_id: sessionId,
       stripe_payment_status: session.payment_status,
     }).then(() => {/* log only, errors non-blocking */});
+
+    await supabase
+      .from("bijou_usage_events")
+      .insert({
+        bijou_id: id_bijou,
+        event_type: "recharge",
+        delta: credits,
+        metadata: {
+          kind,
+          source: "stripe_confirm",
+          stripe_session_id: sessionId,
+        },
+      })
+      .then(() => {/* log only, errors non-blocking */});
 
     return NextResponse.json({ ok: true, kind, total: nouveauxCredits });
   } catch (error: unknown) {

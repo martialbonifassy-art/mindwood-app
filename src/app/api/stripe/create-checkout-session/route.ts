@@ -65,10 +65,10 @@ export async function POST(req: Request) {
         },
       ],
       mode: "payment",
-      success_url: kind === "lectures"
-        ? `${baseUrl}/recharge/success/${body.id_bijou}?session_id={CHECKOUT_SESSION_ID}`
-        : `${baseUrl}/listen/${body.id_bijou}?payment=success`,
-      cancel_url: `${baseUrl}/recharge/${body.id_bijou}?payment=cancelled`,
+      success_url: `${baseUrl}/recharge/success/${body.id_bijou}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: kind === "lectures"
+        ? `${baseUrl}/recharge/${body.id_bijou}?payment=cancelled`
+        : `${baseUrl}/listen/${body.id_bijou}/murmure?payment=cancelled`,
       metadata: {
         id_bijou: body.id_bijou,
         credits: body.credits.toString(),

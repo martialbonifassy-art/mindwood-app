@@ -34,7 +34,12 @@ export default function RechargeSuccessPage() {
         setStatus('success')
         setMessage('Les écoutes ont été activées. Redirection…')
         setTimeout(() => {
-          router.replace(`/listen/recorded/${id}`)
+          if (json.kind === 'lectures') {
+            router.replace(`/listen/recorded/${id}`)
+            return
+          }
+
+          router.replace(`/listen/${id}/murmure`)
         }, 1800)
       } catch (err: unknown) {
         setStatus('error')
@@ -65,7 +70,7 @@ export default function RechargeSuccessPage() {
 
         {status === 'success' && (
           <>
-            <h1 className="text-3xl md:text-5xl leading-[1.3]">C'est fait.</h1>
+            <h1 className="text-3xl md:text-5xl leading-[1.3]">C&apos;est fait.</h1>
             <p className="mt-6 text-base leading-8 text-stone-300">{message}</p>
           </>
         )}

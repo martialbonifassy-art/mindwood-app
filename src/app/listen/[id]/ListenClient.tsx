@@ -509,6 +509,10 @@ export default function ListenClient() {
   const canUse = bijou
     ? Boolean(bijou.est_active) && Number(bijou.credits_restants) > 0
     : false;
+  const sealedType = String(bijou?.type_bijou ?? "");
+  const isRecordedSealed = sealedType === "voix_enregistree";
+  const isMurmuresSealed = sealedType === "murmures_IA";
+  const isAnySealed = isRecordedSealed || isMurmuresSealed;
 
   function openRecordedVoice() {
     if (!id_bijou) {
@@ -516,7 +520,35 @@ export default function ListenClient() {
       return;
     }
 
+    if (isMurmuresSealed) {
+      setError(
+        "Ce bijou est déjà scellé en Murmures IA. La voix enregistrée n'est plus disponible."
+      );
+      return;
+    }
+
     router.push(`/setup/${id_bijou}/firstname`);
+  }
+
+  function openMurmures() {
+    if (!id_bijou) {
+      setError("ID bijou manquant dans l'URL.");
+      return;
+    }
+
+    if (isMurmuresSealed) {
+      setError("Ce bijou est déjà scellé en Murmures IA.");
+      return;
+    }
+
+    if (isRecordedSealed) {
+      setError(
+        "Ce bijou est déjà scellé en voix enregistrée. Murmures IA n'est plus disponible."
+      );
+      return;
+    }
+
+    router.push(`/setup/${id_bijou}/murmures`);
   }
 
   return (
@@ -527,6 +559,16 @@ export default function ListenClient() {
         }
         @media (max-width: 480px) {
           :root { --page-pad: 12px; }
+        }
+        @keyframes mw-sealedPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 16px 40px rgba(170,95,45,0.18), inset 0 1px 0 rgba(255,220,170,0.20);
+          }
+          50% {
+            transform: scale(1.02);
+            box-shadow: 0 22px 56px rgba(210,130,60,0.28), inset 0 1px 0 rgba(255,235,195,0.30);
+          }
         }
       `}</style>
 
@@ -622,7 +664,7 @@ export default function ListenClient() {
         <div style={S.topBar} className="mw-topBar">
           <div style={{ display: "grid", gap: 6 }}>
             <div style={S.kicker} className="mw-kicker">
-              ATELIER DES LIENS INVISIBLES
+              Grain atelier
             </div>
             <h1 style={S.h1}>Lecture du bijou</h1>
           </div>
@@ -674,23 +716,37 @@ export default function ListenClient() {
               <div style={S.choiceButtonsRow}>
                 <button
                   type="button"
-                  style={S.choiceButtonPrimary}
+                  style={{
+                    ...S.choiceButtonPrimary,
+                    opacity: isMurmuresSealed ? 0.45 : 1,
+                    cursor: isMurmuresSealed ? "not-allowed" : "pointer",
+                  }}
                   onClick={openRecordedVoice}
+                  disabled={isMurmuresSealed}
                 >
                   Voix enregistrée
                 </button>
 
                 <button
                   type="button"
-                  style={S.choiceButtonSecondary}
-                  onClick={() => {
-                    setError(null);
-                    setMode("ia");
+                  style={{
+                    ...S.choiceButtonSecondary,
+                    opacity: isRecordedSealed || isMurmuresSealed ? 0.45 : 1,
+                    cursor:
+                      isRecordedSealed || isMurmuresSealed
+                        ? "not-allowed"
+                        : "pointer",
                   }}
+                  onClick={openMurmures}
+                  disabled={isRecordedSealed || isMurmuresSealed}
                 >
                   Murmures IA
                 </button>
               </div>
+
+              {isAnySealed ? (
+                <div style={S.choiceFootnote}>Bijou déjà scellé</div>
+              ) : null}
 
             </div>
           ) : (
@@ -1316,10 +1372,19 @@ const S: Record<string, React.CSSProperties> = {
   },
   choiceFootnote: {
     textAlign: "center",
-    color: "rgba(206,182,156,0.7)",
-    fontSize: 14,
-    lineHeight: 1.6,
-    marginTop: 6,
+    color: "rgba(255,230,196,0.98)",
+    fontSize: 28,
+    lineHeight: 1.2,
+    fontWeight: 900,
+    letterSpacing: 0.6,
+    marginTop: 14,
+    padding: "10px 22px",
+    borderRadius: 999,
+    border: "1px solid rgba(230,175,120,0.40)",
+    background:
+      "linear-gradient(135deg, rgba(95,60,35,0.72) 0%, rgba(78,47,27,0.82) 100%)",
+    textShadow: "0 2px 14px rgba(255,170,90,0.35)",
+    animation: "mw-sealedPulse 2.2s ease-in-out infinite",
   },
   messageWrap: {
     position: "relative",

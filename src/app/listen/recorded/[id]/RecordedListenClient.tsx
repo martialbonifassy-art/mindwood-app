@@ -16,7 +16,7 @@ type VoixEnregistree = {
 
 type Bijou = {
   id_bijou: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export default function RecordedListenClient() {
@@ -262,12 +262,12 @@ export default function RecordedListenClient() {
           </div>
           <h1 className="text-5xl sm:text-6xl font-light mt-8 mb-4 text-white drop-shadow-lg">
             {locale === "fr" ? (
-              <>Un message<br />t'attend</>
+              <>Un message<br />t&apos;attend</>
             ) : (
               <>A message<br />awaits you</>
             )}
           </h1>
-          <p className="text-lg text-white/70 font-light">{locale === "fr" ? "Quelque chose de précieux t'a été confié." : "Something precious has been entrusted to you."}</p>
+          <p className="text-lg text-white/70 font-light">{locale === "fr" ? "Quelque chose de précieux t&apos;a été confié." : "Something precious has been entrusted to you."}</p>
         </div>
 
         <div className="w-full max-w-2xl">
