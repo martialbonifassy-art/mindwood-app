@@ -719,7 +719,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
                   {showRechargeOnOutro ? (
                     <>
                       <p className="mx-auto mt-8 max-w-md text-sm leading-7 text-stone-400">
-                        Le paiement s&apos;ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.
+                        {c.paymentNote}
                       </p>
                       {rechargeMessage ? (
                         <p className="mx-auto mt-6 max-w-md text-sm leading-7 text-amber-200/90">
@@ -760,7 +760,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
                   </div>
 
                   <p className="mx-auto mt-8 max-w-md text-sm leading-7 text-stone-400">
-                    Le paiement s&apos;ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.
+                    {c.paymentNote}
                   </p>
 
                   {rechargeMessage ? (
