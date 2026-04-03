@@ -62,10 +62,103 @@ function toTtsGender(voix: unknown): "male" | "female" | "neutral" {
   return "neutral";
 }
 
-export default function ListenClient() {
+const COPY = {
+  fr: {
+    kicker: "Grain atelier",
+    h1: "Lecture du bijou",
+    experienceActive: "Expérience active",
+    choiceEyebrow: "Grain Atelier",
+    choiceTitle1: "Choisissez l'expérience",
+    choiceTitle2: "que vous souhaitez ouvrir.",
+    choiceIntro:
+      "Voix enregistrée pour écouter un message réel, ou Murmures IA pour recevoir un message généré selon votre thème et votre paramétrage.",
+    voixEnregistree: "Voix enregistrée",
+    murmuresIA: "Murmures IA",
+    dejaScelle: "Bijou déjà scellé",
+    messageAttend: "Un message vous attend…",
+    messageArrive: "Le message arrive…",
+    messageTitle: "✨ Un message pour vous",
+    placeholderTitle: "Un message vous attend.",
+    placeholderPress: "Appuyez sur",
+    placeholderSuffix: "pour le découvrir.",
+    messageCredit: "Ce message a été créé spécialement pour vous.",
+    btnPreparing: "Préparation du message…",
+    btnPause: "⏸ Pause",
+    btnListen: "▶ Écouter le message",
+    btnEcouter: "Écouter",
+    btnCreating: "Création du message…",
+    btnReceive: "Recevoir mon message",
+    btnBack: "Retour au choix",
+    rechargeTitle: "Message momentanément indisponible",
+    rechargeText: "Une nouvelle activation est nécessaire pour continuer.",
+    rechargeCta: "Continuer →",
+    errTitle: "Erreur",
+    errLoading: "Erreur lors du chargement.",
+    errNoId: "ID bijou manquant dans l'URL.",
+    errNotFound: "Bijou non trouvé.",
+    errNotActive: "Ce bijou n'est pas actif.",
+    errNoCredits: "Ce message n'est pas disponible pour le moment.",
+    errConsume: "Erreur lors de la consommation du crédit.",
+    errNoPerso: "Personnalisation manquante.",
+    errGeneration: "Erreur lors de la génération.",
+    errMurmuresSealedVoix:
+      "Ce bijou est déjà scellé en Murmures IA. La voix enregistrée n'est plus disponible.",
+    errMurmuresSealed: "Ce bijou est déjà scellé en Murmures IA.",
+    errVoixSealedMurmures:
+      "Ce bijou est déjà scellé en voix enregistrée. Murmures IA n'est plus disponible.",
+  },
+  en: {
+    kicker: "Grain atelier",
+    h1: "Jewel experience",
+    experienceActive: "Experience active",
+    choiceEyebrow: "Grain Atelier",
+    choiceTitle1: "Choose your experience",
+    choiceTitle2: "to open.",
+    choiceIntro:
+      "Recorded voice to listen to a real message, or AI Whispers to receive a message generated from your theme and settings.",
+    voixEnregistree: "Recorded voice",
+    murmuresIA: "AI Whispers",
+    dejaScelle: "Jewel already sealed",
+    messageAttend: "A message awaits you…",
+    messageArrive: "Message arriving…",
+    messageTitle: "✨ A message for you",
+    placeholderTitle: "A message awaits you.",
+    placeholderPress: "Press",
+    placeholderSuffix: "to discover it.",
+    messageCredit: "This message was created especially for you.",
+    btnPreparing: "Preparing message…",
+    btnPause: "⏸ Pause",
+    btnListen: "▶ Listen to message",
+    btnEcouter: "Listen",
+    btnCreating: "Creating message…",
+    btnReceive: "Receive my message",
+    btnBack: "Back to choice",
+    rechargeTitle: "Message temporarily unavailable",
+    rechargeText: "A new activation is required to continue.",
+    rechargeCta: "Continue →",
+    errTitle: "Error",
+    errLoading: "Loading error.",
+    errNoId: "Jewel ID missing from URL.",
+    errNotFound: "Jewel not found.",
+    errNotActive: "This jewel is not active.",
+    errNoCredits: "This message is not available at the moment.",
+    errConsume: "Error consuming credit.",
+    errNoPerso: "Personalisation missing.",
+    errGeneration: "Generation error.",
+    errMurmuresSealedVoix:
+      "This jewel is already sealed as AI Whispers. Recorded voice is no longer available.",
+    errMurmuresSealed: "This jewel is already sealed as AI Whispers.",
+    errVoixSealedMurmures:
+      "This jewel is already sealed as recorded voice. AI Whispers is no longer available.",
+  },
+} as const;
+
+export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id_bijou = params?.id;
+
+  const c = COPY[locale];
 
   const [mode, setMode] = useState<"choice" | "ia">("choice");
 
@@ -101,7 +194,7 @@ export default function ListenClient() {
       const json = (await res.json().catch(() => ({}))) as ListenLoadResponse;
 
       if (!res.ok || !json.success || !json.data?.bijou) {
-        throw new Error(json.error || "Erreur lors du chargement.");
+        throw new Error(json.error || c.errLoading);
       }
 
       setBijou(json.data.bijou);
@@ -110,7 +203,7 @@ export default function ListenClient() {
       return json.data;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Erreur lors du chargement.";
+        error instanceof Error ? error.message : c.errLoading;
       setError(message);
       return null;
     }
@@ -403,7 +496,7 @@ export default function ListenClient() {
       stopAudio(true);
 
       if (!activePerso) {
-        setError("Personnalisation manquante.");
+        setError(c.errNoPerso);
         return;
       }
 
@@ -490,7 +583,7 @@ export default function ListenClient() {
       const message =
         error instanceof Error
           ? error.message
-          : "Erreur lors de la génération.";
+          : c.errGeneration;
       setError(message);
     } finally {
       setLoading(false);
@@ -498,12 +591,12 @@ export default function ListenClient() {
   }
 
   const buttonLabel = audioLoading
-    ? "Préparation du message…"
+    ? c.btnPreparing
     : audioUrl
       ? isPlaying
-        ? "⏸ Pause"
-        : "▶ Écouter le message"
-      : "Écouter";
+        ? c.btnPause
+        : c.btnListen
+      : c.btnEcouter;
 
   const isActive = bijou?.est_active ?? null;
   const canUse = bijou
@@ -516,14 +609,12 @@ export default function ListenClient() {
 
   function openRecordedVoice() {
     if (!id_bijou) {
-      setError("ID bijou manquant dans l'URL.");
+      setError(c.errNoId);
       return;
     }
 
     if (isMurmuresSealed) {
-      setError(
-        "Ce bijou est déjà scellé en Murmures IA. La voix enregistrée n'est plus disponible."
-      );
+      setError(c.errMurmuresSealedVoix);
       return;
     }
 
@@ -532,19 +623,17 @@ export default function ListenClient() {
 
   function openMurmures() {
     if (!id_bijou) {
-      setError("ID bijou manquant dans l'URL.");
+      setError(c.errNoId);
       return;
     }
 
     if (isMurmuresSealed) {
-      setError("Ce bijou est déjà scellé en Murmures IA.");
+      setError(c.errMurmuresSealed);
       return;
     }
 
     if (isRecordedSealed) {
-      setError(
-        "Ce bijou est déjà scellé en voix enregistrée. Murmures IA n'est plus disponible."
-      );
+      setError(c.errVoixSealedMurmures);
       return;
     }
 
@@ -664,14 +753,14 @@ export default function ListenClient() {
         <div style={S.topBar} className="mw-topBar">
           <div style={{ display: "grid", gap: 6 }}>
             <div style={S.kicker} className="mw-kicker">
-              Grain atelier
+              {c.kicker}
             </div>
-            <h1 style={S.h1}>Lecture du bijou</h1>
+            <h1 style={S.h1}>{c.h1}</h1>
           </div>
 
           <div style={S.miniStats} className="mw-miniStats">
             <span style={{ ...S.miniPill, opacity: 0.6 }}>
-              Expérience active
+              {c.experienceActive}
             </span>
             {isActive !== null ? (
               <span
@@ -694,23 +783,23 @@ export default function ListenClient() {
 
           {error ? (
             <div style={S.alert}>
-              <div style={S.alertTitle}>Erreur</div>
+              <div style={S.alertTitle}>{c.errTitle}</div>
               <div style={S.alertText}>{error}</div>
             </div>
           ) : null}
 
           {mode === "choice" ? (
             <div style={S.choiceWrap}>
-              <div style={S.choiceEyebrow}>Grain Atelier</div>
+              <div style={S.choiceEyebrow}>{c.choiceEyebrow}</div>
 
               <div style={S.choiceTitleMain}>
-                Choisissez l’expérience
+                {c.choiceTitle1}
                 <br />
-                que vous souhaitez ouvrir.
+                {c.choiceTitle2}
               </div>
 
               <div style={S.choiceIntro}>
-                Voix enregistrée pour écouter un message réel, ou Murmures IA pour recevoir un message généré selon votre thème et votre paramétrage.
+                {c.choiceIntro}
               </div>
 
               <div style={S.choiceButtonsRow}>
@@ -724,7 +813,7 @@ export default function ListenClient() {
                   onClick={openRecordedVoice}
                   disabled={isMurmuresSealed}
                 >
-                  Voix enregistrée
+                  {c.voixEnregistree}
                 </button>
 
                 <button
@@ -740,12 +829,12 @@ export default function ListenClient() {
                   onClick={openMurmures}
                   disabled={isRecordedSealed || isMurmuresSealed}
                 >
-                  Murmures IA
+                  {c.murmuresIA}
                 </button>
               </div>
 
               {isAnySealed ? (
-                <div style={S.choiceFootnote}>Bijou déjà scellé</div>
+                <div style={S.choiceFootnote}>{c.dejaScelle}</div>
               ) : null}
 
             </div>
@@ -762,7 +851,7 @@ export default function ListenClient() {
                   marginBottom: 8,
                 }}
               >
-                Un message vous attend…
+                {c.messageAttend}
               </div>
             )}
 
@@ -776,7 +865,7 @@ export default function ListenClient() {
                   marginBottom: 8,
                 }}
               >
-                Le message arrive…
+                {c.messageArrive}
               </div>
             )}
 
@@ -811,7 +900,7 @@ export default function ListenClient() {
                   style={{ ...S.messageTitle, position: "relative", zIndex: 1 }}
                   className="mw-messageTitle"
                 >
-                  ✨ Un message pour vous
+                  {c.messageTitle}
                 </div>
 
                 <div
@@ -834,10 +923,10 @@ export default function ListenClient() {
                     style={S.placeholderTitle}
                     className="mw-placeholderTitle"
                   >
-                    Un message vous attend.
+                    {c.placeholderTitle}
                   </div>
                   <div style={S.placeholderText} className="mw-placeholderText">
-                    Appuyez sur <b>Recevoir mon message</b> pour le découvrir.
+                    {c.placeholderPress} <b>{c.btnReceive}</b> {c.placeholderSuffix}
                   </div>
                 </div>
               </div>
@@ -853,7 +942,7 @@ export default function ListenClient() {
                   lineHeight: 1.5,
                 }}
               >
-                Ce message a été créé spécialement pour vous.
+                {c.messageCredit}
               </div>
             )}
           </div>
@@ -870,7 +959,7 @@ export default function ListenClient() {
               }}
             >
               <span style={{ position: "relative" }}>
-                {loading ? "Création du message…" : "Recevoir mon message"}
+                {loading ? c.btnCreating : c.btnReceive}
               </span>
             </button>
 
@@ -900,7 +989,7 @@ export default function ListenClient() {
               className="mw-btnGhost"
               style={S.btnGhost}
             >
-              Retour au choix
+              {c.btnBack}
             </button>
           </div>
 
@@ -910,10 +999,10 @@ export default function ListenClient() {
                 <div style={S.rechargeIcon}>⚡</div>
                 <div style={S.rechargeMeta}>
                   <div style={S.rechargeTitle}>
-                    Message momentanément indisponible
+                    {c.rechargeTitle}
                   </div>
                   <div style={S.rechargeText}>
-                    Une nouvelle activation est nécessaire pour continuer.
+                    {c.rechargeText}
                   </div>
                 </div>
                 <button
@@ -923,7 +1012,7 @@ export default function ListenClient() {
                   style={S.rechargeBtn}
                   className="mw-rechargeBtn"
                 >
-                  Continuer →
+                  {c.rechargeCta}
                 </button>
               </div>
             </div>
