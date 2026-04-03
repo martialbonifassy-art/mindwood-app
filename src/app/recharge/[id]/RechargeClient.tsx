@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useLocale } from "@/lib/i18n";
 
 type BijouRow = {
   id_bijou: string;
@@ -16,10 +17,63 @@ type VoixEnregistree = {
   lectures_totales: number;
 };
 
+const COPY = {
+  fr: {
+    loading: "Chargement...",
+    errLoad: "Erreur lors du chargement",
+    errCreateSession: "Erreur lors de la création de la session",
+    errMissingPaymentUrl: "URL de paiement manquante",
+    unknownError: "Erreur inconnue",
+    titleLectures: "Recharge de lectures",
+    titleCredits: "Recharge de crédits",
+    lecturesPrefix: "Tu as actuellement",
+    lecturesSuffix1: "lecture restante",
+    lecturesSuffixN: "lectures restantes",
+    messagesPrefix: "Tu as actuellement",
+    messagesSuffix1: "message restant",
+    messagesSuffixN: "messages restants",
+    optionRechargeTitle: "Recharger maintenant",
+    optionRechargeLecturesDesc: "Obtiens plus de lectures pour continuer à écouter le message",
+    optionRechargeCreditsDesc: "Continue avec tes paramètres actuels et paie pour plus de messages",
+    lecturesPack: "lectures",
+    messagesPack: "messages",
+    optionModifyTitle: "Modifier mes paramètres",
+    optionModifyDesc: "Personnalise à nouveau ton thème, ton prénom et tes préférences",
+    goCustomize: "Aller à la personnalisation →",
+    back: "← Retour",
+  },
+  en: {
+    loading: "Loading...",
+    errLoad: "Error while loading",
+    errCreateSession: "Error while creating checkout session",
+    errMissingPaymentUrl: "Missing payment URL",
+    unknownError: "Unknown error",
+    titleLectures: "Recharge listens",
+    titleCredits: "Recharge credits",
+    lecturesPrefix: "You currently have",
+    lecturesSuffix1: "listen left",
+    lecturesSuffixN: "listens left",
+    messagesPrefix: "You currently have",
+    messagesSuffix1: "message left",
+    messagesSuffixN: "messages left",
+    optionRechargeTitle: "Recharge now",
+    optionRechargeLecturesDesc: "Get more listens to keep listening to the message",
+    optionRechargeCreditsDesc: "Continue with your current settings and pay for more messages",
+    lecturesPack: "listens",
+    messagesPack: "messages",
+    optionModifyTitle: "Edit my settings",
+    optionModifyDesc: "Customize your theme, recipient name, and preferences again",
+    goCustomize: "Go to customization →",
+    back: "← Back",
+  },
+};
+
 export default function RechargeClient() {
   const params = useParams<{ id: string }>();
   const id_bijou = params?.id;
   const router = useRouter();
+  const locale = useLocale();
+  const c = COPY[locale];
   const [bijou, setBijou] = useState<BijouRow | null>(null);
   const [voix, setVoix] = useState<VoixEnregistree | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +94,7 @@ export default function RechargeClient() {
 
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json?.success || !json?.data?.bijou) {
-          throw new Error(json?.error || "Erreur lors du chargement");
+          throw new Error(json?.error || c.errLoad);
         }
 
         const data = json.data.bijou as BijouRow;
@@ -54,7 +108,7 @@ export default function RechargeClient() {
           setRechargeType("lectures");
         }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Erreur lors du chargement";
+        const message = err instanceof Error ? err.message : c.errLoad;
         setError(message);
       } finally {
         setLoading(false);
@@ -64,7 +118,7 @@ export default function RechargeClient() {
     if (id_bijou) {
       loadData();
     }
-  }, [id_bijou]);
+  }, [id_bijou, c.errLoad]);
 
   async function handleRecharge(amount: 10 | 20) {
     if (processing) return;
@@ -82,7 +136,7 @@ export default function RechargeClient() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de la création de la session");
+        throw new Error(data.error || c.errCreateSession);
       }
 
       const { url } = await res.json();
@@ -90,10 +144,10 @@ export default function RechargeClient() {
       if (url) {
         window.location.href = url;
       } else {
-        throw new Error("URL de paiement manquante");
+        throw new Error(c.errMissingPaymentUrl);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      const message = err instanceof Error ? err.message : c.unknownError;
       setError(message);
       setProcessing(false);
     }
@@ -104,7 +158,7 @@ export default function RechargeClient() {
       <main style={S.page}>
         <div style={S.shell}>
           <div style={S.content}>
-            <p style={S.loadingText}>Chargement...</p>
+            <p style={S.loadingText}>{c.loading}</p>
           </div>
         </div>
       </main>
@@ -117,20 +171,18 @@ export default function RechargeClient() {
         <div style={S.content}>
           <div style={S.header}>
             <h1 style={S.title}>
-              {rechargeType === "lectures" ? "Recharge de lectures" : "Recharge de crédits"}
+              {rechargeType === "lectures" ? c.titleLectures : c.titleCredits}
             </h1>
             <p style={S.subtitle}>
               {rechargeType === "lectures" ? (
                 <>
-                  Tu as actuellement <strong>{voix?.lectures_restantes ?? 0}</strong> lecture
-                  {(voix?.lectures_restantes ?? 0) !== 1 ? "s" : ""} restante
-                  {(voix?.lectures_restantes ?? 0) !== 1 ? "s" : ""}
+                  {c.lecturesPrefix} <strong>{voix?.lectures_restantes ?? 0}</strong>{" "}
+                  {(voix?.lectures_restantes ?? 0) === 1 ? c.lecturesSuffix1 : c.lecturesSuffixN}
                 </>
               ) : (
                 <>
-                  Tu as actuellement <strong>{bijou?.credits_restants ?? 0}</strong> message
-                  {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""} restant
-                  {(bijou?.credits_restants ?? 0) !== 1 ? "s" : ""}
+                  {c.messagesPrefix} <strong>{bijou?.credits_restants ?? 0}</strong>{" "}
+                  {(bijou?.credits_restants ?? 0) === 1 ? c.messagesSuffix1 : c.messagesSuffixN}
                 </>
               )}
             </p>
@@ -148,11 +200,11 @@ export default function RechargeClient() {
             <div style={S.optionCard}>
               <div style={S.optionIcon}>⚡</div>
               <div style={S.optionContent}>
-                <h3 style={S.optionTitle}>Recharger maintenant</h3>
+                <h3 style={S.optionTitle}>{c.optionRechargeTitle}</h3>
                 <p style={S.optionDescription}>
                   {rechargeType === "lectures"
-                    ? "Obtiens plus de lectures pour continuer à écouter le message"
-                    : "Continue avec tes paramètres actuels et paie pour plus de messages"}
+                    ? c.optionRechargeLecturesDesc
+                    : c.optionRechargeCreditsDesc}
                 </p>
               </div>
               <div style={S.packagesGrid}>
@@ -163,7 +215,7 @@ export default function RechargeClient() {
                 >
                   <div style={S.pkgPrice}>5€</div>
                   <div style={S.pkgDesc}>
-                    {rechargeType === "lectures" ? "10 lectures" : "10 messages"}
+                    {rechargeType === "lectures" ? `10 ${c.lecturesPack}` : `10 ${c.messagesPack}`}
                   </div>
                 </button>
                 <button
@@ -173,7 +225,7 @@ export default function RechargeClient() {
                 >
                   <div style={S.pkgPrice}>10€</div>
                   <div style={S.pkgDesc}>
-                    {rechargeType === "lectures" ? "20 lectures" : "20 messages"}
+                    {rechargeType === "lectures" ? `20 ${c.lecturesPack}` : `20 ${c.messagesPack}`}
                   </div>
                 </button>
               </div>
@@ -184,9 +236,9 @@ export default function RechargeClient() {
               <div style={S.optionCard}>
                 <div style={S.optionIcon}>✏️</div>
                 <div style={S.optionContent}>
-                  <h3 style={S.optionTitle}>Modifier mes paramètres</h3>
+                  <h3 style={S.optionTitle}>{c.optionModifyTitle}</h3>
                   <p style={S.optionDescription}>
-                    Personnalise à nouveau ton thème, ton prénom et tes préférences
+                    {c.optionModifyDesc}
                   </p>
                 </div>
                 <button
@@ -198,7 +250,7 @@ export default function RechargeClient() {
                   disabled={processing}
                   style={S.modifyBtn}
                 >
-                  Aller à la personnalisation →
+                  {c.goCustomize}
                 </button>
               </div>
             )}
@@ -214,7 +266,7 @@ export default function RechargeClient() {
               }
               style={S.backBtn}
             >
-              ← Retour
+              {c.back}
             </button>
           </div>
         </div>
