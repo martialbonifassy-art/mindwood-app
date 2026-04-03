@@ -1,3 +1,5 @@
+import type { Locale } from "../i18n";
+
 export type MurmureThemeId =
   | "presence"
   | "gratitude"
@@ -122,3 +124,109 @@ export const MURMURE_EFFECTS = [
   "un sentiment d'amour",
   "une presence durable",
 ] as const;
+
+const THEME_LABELS_EN: Record<MurmureThemeId, string> = {
+  presence: "Presence",
+  gratitude: "Gratitude",
+  souvenir: "Memory",
+  reconfort: "Comfort",
+  elan: "Momentum",
+  promesse: "Promise",
+};
+
+const THEME_PROMISES_EN: Record<MurmureThemeId, string> = {
+  presence: "Say 'I am here', even in silence or distance.",
+  gratitude: "Express thanks with accuracy and grace.",
+  souvenir: "Revive a moment, a place, a shared sensation.",
+  reconfort: "Soothe without overwhelming.",
+  elan: "Restore breath, courage, movement.",
+  promesse: "Seal a bond through time.",
+};
+
+const THEME_QUESTIONS_EN: Record<MurmureThemeId, string[]> = {
+  presence: [
+    "What do you want this person to feel first?",
+    "In this stage of life, what does this person most need to hear?",
+    "Is there distance between you today?",
+    "Do you want to anchor this whisper in a memory or stay in the present?",
+    "Is there an important word to carry through this whisper?",
+    "How much reserve and intimacy do you want?",
+  ],
+  gratitude: [
+    "What do you want to thank this person for?",
+    "Which quality touches you most in this person?",
+    "Do you want to mention a specific gesture or moment?",
+    "If yes, which one?",
+    "What tone do you want for this thank-you?",
+    "What feeling should remain after listening?",
+  ],
+  souvenir: [
+    "Which memory do you want to bring back to life?",
+    "Where does this memory take place?",
+    "Which sensation is tied to it?",
+    "Which period of life does this memory belong to?",
+    "What does this memory represent today?",
+    "Do you want a vivid whisper, simple and sensitive, nostalgic yet gentle, or bright and alive?",
+  ],
+  reconfort: [
+    "What kind of moment is this person going through?",
+    "What do you especially want to avoid in this whisper?",
+    "What does this person most need to receive?",
+    "Do you want to speak directly about the hardship?",
+    "What intensity do you want?",
+    "How should this whisper close?",
+  ],
+  elan: [
+    "What is this person moving toward?",
+    "What is holding this person back most today?",
+    "Which strength do you recognize in this person?",
+    "What should this whisper invite this person to do?",
+    "What tone do you want to set?",
+    "What final feeling are you looking for?",
+  ],
+  promesse: [
+    "What form does this promise take?",
+    "What is the nature of this bond first and foremost?",
+    "Do you want the promise to be explicit or suggested?",
+    "Which word sums up this pact?",
+    "What register do you want for the whisper?",
+    "What trace should this whisper leave behind?",
+  ],
+};
+
+const VALUE_LABELS_EN: Record<string, string> = {
+  tendre: "tender",
+  apaisante: "soothing",
+  lumineuse: "bright",
+  profonde: "deep",
+  poetique: "poetic",
+  sobre: "subtle",
+  discret: "subtle",
+  sensible: "sensitive",
+  intense: "intense",
+  court: "short",
+  moyen: "medium",
+  ample: "long",
+  "un apaisement": "a sense of calm",
+  "un sourire": "a smile",
+  "de la force": "strength",
+  "un souvenir vivant": "a vivid memory",
+  "un sentiment d'amour": "a feeling of love",
+  "une presence durable": "a lasting presence",
+};
+
+export function getLocalizedTheme(theme: MurmureTheme, locale: Locale): MurmureTheme {
+  if (locale === "fr") return theme;
+
+  return {
+    ...theme,
+    label: THEME_LABELS_EN[theme.id] ?? theme.label,
+    promise: THEME_PROMISES_EN[theme.id] ?? theme.promise,
+    questions: THEME_QUESTIONS_EN[theme.id] ?? theme.questions,
+  };
+}
+
+export function localizeMurmureValue(value: string, locale: Locale): string {
+  if (locale === "fr") return value;
+  return VALUE_LABELS_EN[value] ?? value;
+}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { MURMURE_THEMES } from "@/lib/murmures/theme-definitions";
+import { MURMURE_THEMES, getLocalizedTheme } from "@/lib/murmures/theme-definitions";
 import {
   getMurmureTheme,
   loadMurmureDraft,
@@ -59,7 +59,9 @@ export default function Page() {
             <h1 className="mt-6 text-4xl leading-[1.14] text-stone-100 md:text-5xl">{c.title}</h1>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MURMURE_THEMES.map((theme) => (
+            {MURMURE_THEMES.map((theme) => {
+              const displayTheme = getLocalizedTheme(theme, locale);
+              return (
               <button
                 key={theme.id}
                 className={`rounded-3xl border p-5 text-left transition ${
@@ -69,10 +71,10 @@ export default function Page() {
                 }`}
                 onClick={() => setDraft((prev) => (prev ? { ...prev, theme: theme.id } : prev))}
               >
-                <div className="text-xl font-semibold text-stone-100">{theme.label}</div>
-                <div className="mt-2 text-sm leading-6 text-stone-300">{theme.promise}</div>
+                <div className="text-xl font-semibold text-stone-100">{displayTheme.label}</div>
+                <div className="mt-2 text-sm leading-6 text-stone-300">{displayTheme.promise}</div>
               </button>
-            ))}
+            )})}
           </div>
 
           <div className="mt-10 flex flex-wrap gap-3">

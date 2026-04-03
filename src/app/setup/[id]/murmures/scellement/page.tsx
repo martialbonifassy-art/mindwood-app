@@ -8,6 +8,7 @@ import {
   loadMurmureDraft,
   type MurmureDraft,
 } from "@/lib/murmures/setup-draft";
+import { getLocalizedTheme, localizeMurmureValue } from "@/lib/murmures/theme-definitions";
 import { useSetupSealGuard } from "@/lib/useSetupSealGuard";
 import { useLocale } from "@/lib/i18n";
 
@@ -73,8 +74,12 @@ export default function Page() {
   }, [id, router]);
 
   const theme = useMemo(() => (draft ? getMurmureTheme(draft.theme) : null), [draft]);
+  const localizedTheme = useMemo(
+    () => (theme ? getLocalizedTheme(theme, locale) : null),
+    [theme, locale],
+  );
 
-  if (isGuardChecking || !draft || !theme) {
+  if (isGuardChecking || !draft || !theme || !localizedTheme) {
     return (
       <main className="min-h-screen bg-[#120d0a] text-stone-100">
         <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-10">
@@ -138,11 +143,11 @@ export default function Page() {
             <ul className="mt-4 grid gap-2 text-base leading-7">
               <li>{c.labelRecipient}: {draft.recipientFirstName}</li>
               <li>{c.labelRelation}: {draft.relationshipType}</li>
-              <li>{c.labelTheme}: {theme.label}</li>
-              <li>{c.labelTone}: {draft.tone}</li>
-              <li>{c.labelIntensity}: {draft.emotionalIntensity}</li>
-              <li>{c.labelLength}: {draft.lengthPreference}</li>
-              <li>{c.labelEffect}: {draft.desiredEffect}</li>
+              <li>{c.labelTheme}: {localizedTheme.label}</li>
+              <li>{c.labelTone}: {localizeMurmureValue(draft.tone, locale)}</li>
+              <li>{c.labelIntensity}: {localizeMurmureValue(draft.emotionalIntensity, locale)}</li>
+              <li>{c.labelLength}: {localizeMurmureValue(draft.lengthPreference, locale)}</li>
+              <li>{c.labelEffect}: {localizeMurmureValue(draft.desiredEffect, locale)}</li>
             </ul>
           </div>
 

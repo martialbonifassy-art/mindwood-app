@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  getLocalizedTheme,
+  localizeMurmureValue,
   MURMURE_EFFECTS,
   MURMURE_INTENSITIES,
   MURMURE_LENGTHS,
@@ -127,8 +129,12 @@ export default function Page() {
   }, [id, draft.theme, router]);
 
   const theme = useMemo(() => getMurmureTheme(draft.theme), [draft.theme]);
+  const localizedTheme = useMemo(
+    () => (theme ? getLocalizedTheme(theme, locale) : null),
+    [theme, locale],
+  );
 
-  if (isGuardChecking || !theme) {
+  if (isGuardChecking || !theme || !localizedTheme) {
     return (
       <main className="min-h-screen bg-[#120d0a] text-stone-100">
         <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-10">
@@ -150,7 +156,7 @@ export default function Page() {
         <section className="w-full rounded-[2rem] border border-amber-200/15 bg-[rgba(28,18,12,0.78)] p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-12">
           <p className="text-xs uppercase tracking-[0.35em] text-stone-500">{c.kicker}</p>
           <h1 className="mt-6 text-4xl leading-[1.14] text-stone-100 md:text-5xl">{c.title}</h1>
-          <p className="mt-4 text-base text-stone-300">{c.chosenIntention}{theme.label}</p>
+          <p className="mt-4 text-base text-stone-300">{c.chosenIntention}{localizedTheme.label}</p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -177,7 +183,7 @@ export default function Page() {
                 }
               >
                 {MURMURE_LENGTHS.map((v) => (
-                  <option key={v} value={v}>{`${c.lengthPrefix}${v}`}</option>
+                  <option key={v} value={v}>{`${c.lengthPrefix}${localizeMurmureValue(v, locale)}`}</option>
                 ))}
               </select>
             </div>
@@ -192,7 +198,7 @@ export default function Page() {
                 }
               >
                 {MURMURE_TONES.map((v) => (
-                  <option key={v} value={v}>{`${c.stylePrefix}${v}`}</option>
+                  <option key={v} value={v}>{`${c.stylePrefix}${localizeMurmureValue(v, locale)}`}</option>
                 ))}
               </select>
             </div>
@@ -207,7 +213,7 @@ export default function Page() {
                 }
               >
                 {MURMURE_INTENSITIES.map((v) => (
-                  <option key={v} value={v}>{`${c.tonePrefix}${v}`}</option>
+                  <option key={v} value={v}>{`${c.tonePrefix}${localizeMurmureValue(v, locale)}`}</option>
                 ))}
               </select>
             </div>
@@ -220,13 +226,13 @@ export default function Page() {
               }
             >
               {MURMURE_EFFECTS.map((v) => (
-                <option key={v} value={v}>{v}</option>
+                <option key={v} value={v}>{localizeMurmureValue(v, locale)}</option>
               ))}
             </select>
           </div>
 
           <div className="mt-10 grid gap-4">
-            {theme.questions.map((question, index) => (
+            {localizedTheme.questions.map((question, index) => (
               <div key={question} className="grid gap-2">
                 <label className="text-sm text-stone-300">{question}</label>
                 <input
@@ -239,7 +245,7 @@ export default function Page() {
                       return { ...prev, criteriaAnswers: answers };
                     })
                   }
-                  placeholder={criteriaPlaceholder(theme.id, index)}
+                  placeholder={locale === "en" ? "Example: Describe in one concrete sentence." : criteriaPlaceholder(theme.id, index)}
                 />
               </div>
             ))}
