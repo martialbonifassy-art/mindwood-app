@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { getLocaleFromHost, type Locale } from "@/lib/i18n";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-01-28.clover",
 });
+
+const COPY: Record<Locale, {
+  missingId: string;
+  invalidPackage: string;
+  stripeError: string;
+}> = {
+  fr: {
+    missingId: "id_bijou manquant",
+    invalidPackage: "Package invalide. Choisir 10 ou 20 messages.",
+    stripeError: "Erreur Stripe",
+  },
+  en: {
+    missingId: "Missing id_bijou",
+    invalidPackage: "Invalid package. Choose 10 or 20 messages.",
+    stripeError: "Stripe error",
+  },
+};
 
 type RequestBody = {
   id_bijou: string;
@@ -18,19 +36,22 @@ const PACKAGES = {
 };
 
 export async function POST(req: Request) {
+  const locale = getLocaleFromHost(req.headers.get("host"));
+  const c = COPY[locale];
+
   try {
     const body = (await req.json()) as RequestBody;
 
     if (!body.id_bijou) {
       return NextResponse.json(
-        { error: "id_bijou manquant" },
+        { error: c.missingId },
         { status: 400 }
       );
     }
 
     if (!body.credits || ![10, 20].includes(body.credits)) {
       return NextResponse.json(
-        { error: "Package invalide. Choisir 10 ou 20 messages." },
+        { error: c.invalidPackage },
         { status: 400 }
       );
     }
@@ -82,7 +103,6 @@ export async function POST(req: Request) {
     });
   } catch (error: unknown) {
     console.error("Stripe checkout error:", error);
-    const message = error instanceof Error ? error.message : "Erreur Stripe";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: c.stripeError }, { status: 500 });
   }
 }
