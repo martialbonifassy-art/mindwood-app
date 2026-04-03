@@ -38,10 +38,134 @@ const fade = {
 
 const softButton =
   "inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm tracking-[0.24em] text-stone-100 uppercase backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40";
+const COPY = {
+  fr: {
+    listeningLabel: "Écoute…",
+    preludeText: "Prenez un instant.",
+    errUnavailable: "Ce murmure est indisponible.",
+    errOpenFailed: "Une erreur est survenue lors de l’ouverture du murmure.",
+    errPlaybackStart: "Impossible de lancer l’écoute.",
+    errPlaybackFailed: "La lecture n’a pas pu démarrer.",
+    errAudio: "L’audio n’a pas pu être chargé.",
+    checkingPayment: "Vérification du paiement en cours…",
+    errRechargeNotConfirmed: "Le rechargement n’est pas encore confirmé. Réessayez dans quelques secondes.",
+    rechargeRestored: "Les écoutes ont été restaurées. Vous pouvez reprendre le murmure.",
+    rechargePending: "Le paiement n’est pas encore visible. Revenez dans un instant puis vérifiez à nouveau.",
+    errCheckPayment: "Impossible de vérifier le paiement pour le moment.",
+    openingPayment: "Ouverture du paiement…",
+    errCheckoutFailed: "Impossible de créer la session de paiement.",
+    errCheckoutUnavailable: "Le paiement n’a pas pu être ouvert pour le moment.",
+    forPrefix: "Pour ",
+    forYou: "Pour vous",
+    intentionPrefix: "Intention : ",
+    intimateMessage: "Un message façonné, intime et scellé.",
+    readyBtn: "Je suis prêt",
+    preludeEyebrow: "Prenez ce moment",
+    preludeLines: [
+      "Avant d’écouter…",
+      "Prenez un instant.",
+      "Laissez le silence vous rejoindre.",
+      "Ce murmure vous est destiné.",
+    ],
+    listenWhisperBtn: "Écouter le murmure",
+    preparingBtn: "Préparation…",
+    listensLeft1: "écoute restante",
+    listensLeftN: " écoutes restantes",
+    playerEyebrow: "Lecture",
+    whisperPrefix: "Un murmure pour ",
+    whisperForYou: "Un murmure pour vous",
+    settleWords: "Laissez les mots se déposer en vous.",
+    pauseBtn: "Suspendre",
+    resumeBtn: "Reprendre",
+    listenBtn: "Écouter",
+    outroEyebrowRecharge: "Dernière écoute",
+    outroEyebrowAfter: "Après",
+    outroTextRecharge: "Ce murmure a été entendu une dernière fois.",
+    outroTextNormal: "Ce murmure fait maintenant partie de vous.",
+    outroSubtextRecharge: "Pour le raviver, vous pouvez ouvrir 10 nouvelles écoutes.",
+    outroSubtextNormal: "Il restera ici, scellé dans le bijou.",
+    reactivateBtn: "Réactiver 10 écoutes – 5€",
+    openingBtn: "Ouverture…",
+    paidBtn: "J’ai payé, reprendre l’écoute",
+    checkingBtn: "Vérification…",
+    closeBtn: "Fermer",
+    replayBtn: "Réécouter",
+    paymentNote: "Le paiement s’ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.",
+    rechargeEyebrow: "Écoutes épuisées",
+    rechargeTitle: "Ce murmure peut encore revivre.",
+    rechargeText: "Toutes les écoutes ont été utilisées. Ouvrez 10 nouvelles écoutes pour 5€ puis revenez ici pour reprendre le murmure.",
+    errorEyebrow: "Ouverture impossible",
+    errorTitle: "Ce murmure n’a pas pu s’ouvrir correctement.",
+    errorDefault: "Le murmure est peut-être indisponible, déjà expiré ou en cours de préparation.",
+    retryBtn: "Réessayer",
+  },
+  en: {
+    listeningLabel: "Listening…",
+    preludeText: "Take a moment.",
+    errUnavailable: "This whisper is unavailable.",
+    errOpenFailed: "An error occurred while opening the whisper.",
+    errPlaybackStart: "Unable to start playback.",
+    errPlaybackFailed: "Playback could not start.",
+    errAudio: "The audio could not be loaded.",
+    checkingPayment: "Checking payment…",
+    errRechargeNotConfirmed: "Recharge not yet confirmed. Try again in a few seconds.",
+    rechargeRestored: "Listens restored. You can resume the whisper.",
+    rechargePending: "Payment not yet visible. Come back in a moment and check again.",
+    errCheckPayment: "Unable to verify payment at the moment.",
+    openingPayment: "Opening payment…",
+    errCheckoutFailed: "Unable to create payment session.",
+    errCheckoutUnavailable: "Payment could not be opened at the moment.",
+    forPrefix: "For ",
+    forYou: "For you",
+    intentionPrefix: "Intention: ",
+    intimateMessage: "A crafted, intimate, sealed message.",
+    readyBtn: "I’m ready",
+    preludeEyebrow: "Take this moment",
+    preludeLines: [
+      "Before you listen…",
+      "Take a moment.",
+      "Let the silence find you.",
+      "This whisper is meant for you.",
+    ],
+    listenWhisperBtn: "Listen to the whisper",
+    preparingBtn: "Preparing…",
+    listensLeft1: "listen left",
+    listensLeftN: " listens left",
+    playerEyebrow: "Playing",
+    whisperPrefix: "A whisper for ",
+    whisperForYou: "A whisper for you",
+    settleWords: "Let the words settle within you.",
+    pauseBtn: "Pause",
+    resumeBtn: "Resume",
+    listenBtn: "Listen",
+    outroEyebrowRecharge: "Last listen",
+    outroEyebrowAfter: "After",
+    outroTextRecharge: "This whisper has been heard one last time.",
+    outroTextNormal: "This whisper is now part of you.",
+    outroSubtextRecharge: "To revive it, you can open 10 new listens.",
+    outroSubtextNormal: "It will remain here, sealed in the jewel.",
+    reactivateBtn: "Reactivate 10 listens – €5",
+    openingBtn: "Opening…",
+    paidBtn: "I’ve paid, resume listening",
+    checkingBtn: "Checking…",
+    closeBtn: "Close",
+    replayBtn: "Listen again",
+    paymentNote: "Payment will open and you’ll return to Mindwood automatically once done.",
+    rechargeEyebrow: "Listens exhausted",
+    rechargeTitle: "This whisper can live again.",
+    rechargeText: "All listens have been used. Open 10 new listens for €5, then come back here to resume the whisper.",
+    errorEyebrow: "Cannot open",
+    errorTitle: "This whisper could not be opened correctly.",
+    errorDefault: "The whisper may be unavailable, already expired, or still being prepared.",
+    retryBtn: "Try again",
+  },
+};
 
-export default function MurmureListenClient() {
+
+export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" | "en" }) {
   const params = useParams();
   const id = useMemo(() => String(params?.id ?? ""), [params]);
+  const c = COPY[locale];
 
   const [stage, setStage] = useState<Stage>("arrival");
   const [payload, setPayload] = useState<ListenPayload | null>(null);
@@ -53,7 +177,7 @@ export default function MurmureListenClient() {
   const [hasEnded, setHasEnded] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [displayLine, setDisplayLine] = useState("Écoute…");
+  const [displayLine, setDisplayLine] = useState<string>(c.listeningLabel);
   const [isCheckingRecharge, setIsCheckingRecharge] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
@@ -87,7 +211,7 @@ export default function MurmureListenClient() {
 
         const json = (await res.json()) as ApiResponse;
         if (!res.ok || !json.success || !json.data?.audioUrl) {
-          throw new Error(json.error || "Ce murmure est indisponible.");
+          throw new Error(json.error || c.errUnavailable);
         }
 
         if (!isMounted) return;
@@ -104,7 +228,7 @@ export default function MurmureListenClient() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Une erreur est survenue lors de l'ouverture du murmure."
+            : c.errOpenFailed
         );
         setStage("error");
       } finally {
@@ -148,7 +272,7 @@ export default function MurmureListenClient() {
     const onPlay = () => {
       setIsPlaying(true);
       setHasStarted(true);
-      setDisplayLine(payload.firstName ? `Pour ${payload.firstName}` : "Pour vous");
+      setDisplayLine(payload.firstName ? `${c.forPrefix}${payload.firstName}` : c.forYou);
     };
 
     const onPause = () => {
@@ -164,7 +288,7 @@ export default function MurmureListenClient() {
     };
 
     const onError = () => {
-      setErrorMessage("L'audio n'a pas pu être chargé.");
+      setErrorMessage(c.errAudio);
       setStage("error");
     };
 
@@ -227,7 +351,7 @@ export default function MurmureListenClient() {
         setStage("recharge");
         return false;
       }
-      throw new Error(json?.error || "Impossible de lancer l'ecoute.");
+      throw new Error(json?.error || c.errPlaybackStart);
     }
 
     if (typeof json?.data?.remainingListens === "number") {
@@ -244,7 +368,7 @@ export default function MurmureListenClient() {
     if (!audio) return;
 
     try {
-      setDisplayLine("Écoute…");
+      setDisplayLine(c.listeningLabel);
       setStage("breath");
 
       breathTimeoutRef.current = window.setTimeout(() => {
@@ -264,14 +388,14 @@ export default function MurmureListenClient() {
             setErrorMessage(
               error instanceof Error
                 ? error.message
-                : "La lecture n'a pas pu démarrer."
+                : c.errPlaybackFailed
             );
             setStage("error");
           }
         })();
       }, 1400);
     } catch {
-      setErrorMessage("La lecture n'a pas pu démarrer.");
+      setErrorMessage(c.errPlaybackFailed);
       setStage("error");
     }
   }
@@ -297,7 +421,7 @@ export default function MurmureListenClient() {
   async function refreshCreditsAfterPayment() {
     try {
       setIsCheckingRecharge(true);
-      setRechargeMessage("Vérification du paiement en cours…");
+      setRechargeMessage(c.checkingPayment);
 
       const res = await fetch(`/api/murmures/${id}/listen`, {
         method: "GET",
@@ -308,7 +432,7 @@ export default function MurmureListenClient() {
 
       if (!res.ok || !json.success || !json.data) {
         setRechargeMessage(
-          "Le rechargement n'est pas encore confirmé. Réessayez dans quelques secondes."
+          c.errRechargeNotConfirmed
         );
         return;
       }
@@ -316,7 +440,7 @@ export default function MurmureListenClient() {
       setPayload(json.data);
 
       if (json.data.remainingListens > 0) {
-        setRechargeMessage("Les écoutes ont été restaurées. Vous pouvez reprendre le murmure.");
+        setRechargeMessage(c.rechargeRestored);
         setIsReadyToPlay(false);
         setHasStarted(false);
         setHasEnded(false);
@@ -327,9 +451,9 @@ export default function MurmureListenClient() {
         return;
       }
 
-      setRechargeMessage("Le paiement n'est pas encore visible. Revenez dans un instant puis vérifiez à nouveau.");
+      setRechargeMessage(c.rechargePending);
     } catch {
-      setRechargeMessage("Impossible de vérifier le paiement pour le moment.");
+      setRechargeMessage(c.errCheckPayment);
     } finally {
       setIsCheckingRecharge(false);
     }
@@ -338,7 +462,7 @@ export default function MurmureListenClient() {
   async function startRechargeCheckout() {
     try {
       setIsCreatingCheckout(true);
-      setRechargeMessage("Ouverture du paiement…");
+      setRechargeMessage(c.openingPayment);
 
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
@@ -352,7 +476,7 @@ export default function MurmureListenClient() {
 
       const json = await res.json();
       if (!res.ok || !json.url) {
-        throw new Error(json.error || "Impossible de créer la session de paiement.");
+        throw new Error(json.error || c.errCheckoutFailed);
       }
 
       window.location.href = json.url;
@@ -360,7 +484,7 @@ export default function MurmureListenClient() {
       setRechargeMessage(
         error instanceof Error
           ? error.message
-          : "Le paiement n'a pas pu être ouvert pour le moment."
+          : c.errCheckoutUnavailable
       );
     } finally {
       setIsCreatingCheckout(false);
@@ -370,7 +494,7 @@ export default function MurmureListenClient() {
   function goPrelude() {
     setStage("prelude");
     preludeTimeoutRef.current = window.setTimeout(() => {
-      setDisplayLine("Prenez un instant.");
+      setDisplayLine(c.preludeText);
     }, 1200);
   }
 
@@ -403,15 +527,15 @@ export default function MurmureListenClient() {
                   <BrandSeal fadeOnly />
                   <Eyebrow text="Grain Atelier" />
                   <p className="mx-auto max-w-xl text-3xl leading-[1.45] text-stone-100 md:text-5xl md:leading-[1.35]">
-                    Ce bijou contient un murmure pour vous.
+                    {c.arrivalText}
                   </p>
                   <p className="mx-auto mt-8 max-w-lg text-base leading-8 text-stone-300 md:text-lg">
-                    {payload.theme ? `Intention: ${payload.theme}.` : "Un message façonné, intime et scellé."}
+                    {payload.theme ? `${c.intentionPrefix}${payload.theme}.` : c.intimateMessage}
                   </p>
 
                   <div className="mt-14">
                     <button className={softButton} onClick={goPrelude}>
-                      Je suis prêt
+                      {c.readyBtn}
                     </button>
                   </div>
                 </section>
@@ -420,14 +544,9 @@ export default function MurmureListenClient() {
               {stage === "prelude" && (
                 <motion.section key="prelude" {...fade} className="mx-auto max-w-2xl text-center">
                   <BrandSeal small />
-                  <Eyebrow text="Prenez ce moment" />
+                  <Eyebrow text={c.preludeEyebrow} />
                   <SequentialText
-                    lines={[
-                      "Avant d'écouter…",
-                      "Prenez un instant.",
-                      "Laissez le silence vous rejoindre.",
-                      "Ce murmure vous est destiné.",
-                    ]}
+                    lines={c.preludeLines}
                   />
 
                   <motion.div
@@ -437,13 +556,13 @@ export default function MurmureListenClient() {
                     className="mt-14"
                   >
                     <button className={softButton} onClick={startPlayback} disabled={!isReadyToPlay}>
-                      {isReadyToPlay ? "Écouter le murmure" : "Préparation…"}
+                      {isReadyToPlay ? c.listenWhisperBtn : c.preparingBtn}
                     </button>
                   </motion.div>
 
                   {showCounter && (
                     <p className="mt-8 text-xs uppercase tracking-[0.28em] text-stone-500">
-                      {safeRemaining === 1 ? "1 écoute restante" : `${safeRemaining} écoutes restantes`}
+                      {safeRemaining === 1 ? `1 ${c.listensLeft1}` : `${safeRemaining}${c.listensLeftN}`}
                     </p>
                   )}
                 </motion.section>
@@ -463,17 +582,17 @@ export default function MurmureListenClient() {
 
               {stage === "player" && payload && (
                 <motion.section key="player" {...fade} className="mx-auto max-w-2xl text-center">
-                  <Eyebrow text="Lecture" />
+                  <Eyebrow text={c.playerEyebrow} />
                   <WaveHalo isPlaying={isPlaying} />
 
                   <p className="mt-10 text-sm uppercase tracking-[0.28em] text-stone-400">{displayLine}</p>
 
                   <h1 className="mx-auto mt-5 max-w-xl text-3xl leading-[1.45] text-stone-100 md:text-5xl md:leading-[1.3]">
-                    {payload.firstName ? `Un murmure pour ${payload.firstName}` : "Un murmure pour vous"}
+                    {payload.firstName ? `${c.whisperPrefix}${payload.firstName}` : c.whisperForYou}
                   </h1>
 
                   <p className="mx-auto mt-6 max-w-lg text-base leading-8 text-stone-300 md:text-lg">
-                    Laissez les mots se déposer en vous.
+                    {c.settleWords}
                   </p>
 
                   <div className="mx-auto mt-10 w-full max-w-md">
@@ -507,13 +626,13 @@ export default function MurmureListenClient() {
                         }
                       }}
                     >
-                      {isPlaying ? "Suspendre" : hasStarted ? "Reprendre" : "Écouter"}
+                      {isPlaying ? c.pauseBtn : hasStarted ? c.resumeBtn : c.listenBtn}
                     </button>
                   </div>
 
                   {showCounter && (
                     <p className="mt-10 text-xs uppercase tracking-[0.28em] text-stone-500">
-                      {safeRemaining === 1 ? "1 écoute restante" : `${safeRemaining} écoutes restantes`}
+                      {safeRemaining === 1 ? `1 ${c.listensLeft1}` : `${safeRemaining}${c.listensLeftN}`}
                     </p>
                   )}
                 </motion.section>
@@ -522,7 +641,7 @@ export default function MurmureListenClient() {
               {stage === "outro" && payload && (
                 <motion.section key="outro" {...fade} className="mx-auto max-w-2xl text-center">
                   <BrandSeal small dimmed />
-                  <Eyebrow text={showRechargeOnOutro ? "Dernière écoute" : "Après"} />
+                  <Eyebrow text={showRechargeOnOutro ? c.outroEyebrowRecharge : c.outroEyebrowAfter} />
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -530,8 +649,8 @@ export default function MurmureListenClient() {
                     className="mx-auto max-w-xl text-3xl leading-[1.45] text-stone-100 md:text-5xl md:leading-[1.35]"
                   >
                     {showRechargeOnOutro
-                      ? "Ce murmure a été entendu une dernière fois."
-                      : "Ce murmure fait maintenant partie de vous."}
+                      ? c.outroTextRecharge
+                      : c.outroTextNormal}
                   </motion.p>
 
                   <motion.p
@@ -541,13 +660,13 @@ export default function MurmureListenClient() {
                     className="mx-auto mt-8 max-w-lg text-base leading-8 text-stone-300 md:text-lg"
                   >
                     {showRechargeOnOutro
-                      ? "Pour le raviver, vous pouvez ouvrir 10 nouvelles écoutes."
-                      : "Il restera ici, scellé dans le bijou."}
+                      ? c.outroSubtextRecharge
+                      : c.outroSubtextNormal}
                   </motion.p>
 
                   {showCounter && (
                     <p className="mt-8 text-xs uppercase tracking-[0.28em] text-stone-500">
-                      {safeRemaining === 1 ? "1 écoute restante" : `${safeRemaining} écoutes restantes`}
+                      {safeRemaining === 1 ? `1 ${c.listensLeft1}` : `${safeRemaining}${c.listensLeftN}`}
                     </p>
                   )}
 
@@ -564,32 +683,32 @@ export default function MurmureListenClient() {
                           onClick={startRechargeCheckout}
                           disabled={isCreatingCheckout || isCheckingRecharge}
                         >
-                          {isCreatingCheckout ? "Ouverture…" : "Réactiver 10 écoutes – 5€"}
+                          {isCreatingCheckout ? c.openingBtn : c.reactivateBtn}
                         </button>
                         <button
                           className={`${softButton} border-white/10 bg-transparent text-stone-300 hover:bg-white/5`}
                           onClick={refreshCreditsAfterPayment}
                           disabled={isCheckingRecharge || isCreatingCheckout}
                         >
-                          {isCheckingRecharge ? "Vérification…" : "J'ai payé, reprendre l'écoute"}
+                          {isCheckingRecharge ? c.checkingBtn : c.paidBtn}
                         </button>
                         <button
                           className={`${softButton} border-white/10 bg-transparent text-stone-300 hover:bg-white/5`}
                           onClick={closeWindow}
                         >
-                          Fermer
+                          {c.closeBtn}
                         </button>
                       </>
                     ) : (
                       <>
                         <button className={softButton} onClick={replay}>
-                          Réécouter
+                          {c.replayBtn}
                         </button>
                         <button
                           className={`${softButton} border-white/10 bg-transparent text-stone-300 hover:bg-white/5`}
                           onClick={closeWindow}
                         >
-                          Fermer
+                          {c.closeBtn}
                         </button>
                       </>
                     )}
@@ -613,12 +732,12 @@ export default function MurmureListenClient() {
               {stage === "recharge" && (
                 <motion.section key="recharge" {...fade} className="mx-auto max-w-2xl text-center">
                   <BrandSeal />
-                  <Eyebrow text="Écoutes épuisées" />
+                  <Eyebrow text={c.rechargeEyebrow} />
                   <p className="mx-auto max-w-xl text-3xl leading-[1.45] text-stone-100 md:text-5xl md:leading-[1.35]">
-                    Ce murmure peut encore revivre.
+                    {c.rechargeTitle}
                   </p>
                   <p className="mx-auto mt-8 max-w-lg text-base leading-8 text-stone-300 md:text-lg">
-                    Toutes les écoutes ont été utilisées. Ouvrez 10 nouvelles écoutes pour 5€ puis revenez ici pour reprendre le murmure.
+                    {c.rechargeText}
                   </p>
 
                   <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -627,14 +746,14 @@ export default function MurmureListenClient() {
                       onClick={startRechargeCheckout}
                       disabled={isCreatingCheckout || isCheckingRecharge}
                     >
-                      {isCreatingCheckout ? "Ouverture…" : "Réactiver 10 écoutes – 5€"}
+                      {isCreatingCheckout ? c.openingBtn : c.reactivateBtn}
                     </button>
                     <button
                       className={`${softButton} border-white/10 bg-transparent text-stone-300 hover:bg-white/5`}
                       onClick={refreshCreditsAfterPayment}
                       disabled={isCheckingRecharge || isCreatingCheckout}
                     >
-                      {isCheckingRecharge ? "Vérification…" : "J'ai payé, reprendre l'écoute"}
+                      {isCheckingRecharge ? c.checkingBtn : c.paidBtn}
                     </button>
                   </div>
 
@@ -653,17 +772,17 @@ export default function MurmureListenClient() {
               {stage === "error" && (
                 <motion.section key="error" {...fade} className="mx-auto max-w-xl text-center">
                   <BrandSeal small dimmed />
-                  <Eyebrow text="Ouverture impossible" />
+                  <Eyebrow text={c.errorEyebrow} />
                   <h1 className="text-3xl leading-[1.4] text-stone-100 md:text-4xl">
-                    Ce murmure n&apos;a pas pu s&apos;ouvrir correctement.
+                    {c.errorTitle}
                   </h1>
                   <p className="mt-6 text-base leading-8 text-stone-300">
                     {errorMessage ||
-                      "Le murmure est peut-être indisponible, déjà expiré ou en cours de préparation."}
+                      c.errorDefault}
                   </p>
                   <div className="mt-10 flex items-center justify-center gap-4">
                     <button className={softButton} onClick={() => window.location.reload()}>
-                      Réessayer
+                      {c.retryBtn}
                     </button>
                   </div>
                 </motion.section>

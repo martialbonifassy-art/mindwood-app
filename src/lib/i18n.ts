@@ -4,10 +4,14 @@ export type Locale = "fr" | "en";
 
 export function getLocaleFromHost(host: string | null): Locale {
   if (!host) return "fr";
-  
-  // .com = English, .fr = French
   if (host.includes(".com")) return "en";
   return "fr";
+}
+
+// Client-side locale detection hook (for "use client" components)
+export function useLocale(): Locale {
+  if (typeof window === "undefined") return "fr";
+  return getLocaleFromHost(window.location.hostname);
 }
 
 export const translations = {
