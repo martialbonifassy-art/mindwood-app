@@ -641,391 +641,159 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
   }
 
   return (
-    <main style={S.page}>
-      <style>{`
-        @media (max-width: 768px) {
-          :root { --page-pad: 14px; }
-        }
-        @media (max-width: 480px) {
-          :root { --page-pad: 12px; }
-        }
-        @keyframes mw-sealedPulse {
-          0%, 100% {
-            transform: scale(1);
-            box-shadow: 0 16px 40px rgba(170,95,45,0.18), inset 0 1px 0 rgba(255,220,170,0.20);
-          }
-          50% {
-            transform: scale(1.02);
-            box-shadow: 0 22px 56px rgba(210,130,60,0.28), inset 0 1px 0 rgba(255,235,195,0.30);
-          }
-        }
-      `}</style>
-
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 1,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "15%",
-            left: "12%",
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(210,150,90,0.65), transparent)",
-            filter: "blur(1px)",
-            animation: "mw-float1 8s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "25%",
-            right: "18%",
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(180,120,70,0.55), transparent)",
-            filter: "blur(1px)",
-            animation: "mw-float2 10s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: "30%",
-            left: "20%",
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(200,140,85,0.60), transparent)",
-            filter: "blur(1px)",
-            animation: "mw-float3 9s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "60%",
-            right: "25%",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(190,130,80,0.50), transparent)",
-            filter: "blur(1px)",
-            animation: "mw-float1 11s ease-in-out infinite 2s",
-          }}
-        />
+    <main className="mw-shell min-h-screen p-4">
+      {/* Effets décoratifs globaux */}
+      <div className="pointer-events-none fixed inset-0 z-10 overflow-hidden">
+        <div className="absolute top-[15%] left-[12%] w-2 h-2 rounded-full" style={{background: "radial-gradient(circle, rgba(210,150,90,0.65), transparent)", filter: "blur(1px)", animation: "mw-float1 8s ease-in-out infinite"}} />
+        <div className="absolute top-[25%] right-[18%] w-1.5 h-1.5 rounded-full" style={{background: "radial-gradient(circle, rgba(180,120,70,0.55), transparent)", filter: "blur(1px)", animation: "mw-float2 10s ease-in-out infinite"}} />
+        <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 rounded-full" style={{background: "radial-gradient(circle, rgba(200,140,85,0.60), transparent)", filter: "blur(1px)", animation: "mw-float3 9s ease-in-out infinite"}} />
+        <div className="absolute top-[60%] right-[25%] w-1.5 h-1.5 rounded-full" style={{background: "radial-gradient(circle, rgba(190,130,80,0.50), transparent)", filter: "blur(1px)", animation: "mw-float1 11s ease-in-out infinite 2s"}} />
       </div>
 
-      <div style={S.shell} className="mw-shell">
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            overflow: "hidden",
-            borderRadius: "inherit",
-            zIndex: 0,
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              inset: "-100% -200%",
-              background:
-                "linear-gradient(110deg, transparent 40%, rgba(210,150,90,0.15) 50%, transparent 60%)",
-              animation: "mw-shimmer 8s ease-in-out infinite",
-            }}
-          />
-        </div>
-
-        {mode !== "choice" ? (
-          <div style={S.topBar} className="mw-topBar">
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={S.kicker} className="mw-kicker">
-                {c.kicker}
-              </div>
-              <h1 style={S.h1}>{c.h1}</h1>
+      <div className="mw-shell mx-auto max-w-3xl relative">
+        {/* TopBar */}
+        {mode !== "choice" && (
+          <div className="mw-topBar flex justify-between items-start gap-3 p-3">
+            <div className="grid gap-1">
+              <div className="mw-kicker text-xs uppercase tracking-widest font-bold text-[rgba(210,160,110,0.85)] opacity-70">{c.kicker}</div>
+              <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[rgba(245,215,180,1)] to-[rgba(210,160,110,1)] bg-clip-text text-transparent">{c.h1}</h1>
             </div>
-
-            <div style={S.miniStats} className="mw-miniStats">
-              <span style={{ ...S.miniPill, opacity: 0.6 }}>
-                {c.experienceActive}
-              </span>
-              {isActive !== null ? (
-                <span
-                  style={{
-                    ...S.dot,
-                    background: isActive
-                      ? "rgba(60,190,120,1)"
-                      : "rgba(255,120,120,1)",
-                  }}
-                />
-              ) : null}
+            <div className="mw-miniStats flex items-center gap-2 px-4 py-2 rounded-full border border-[rgba(210,150,90,0.25)] bg-gradient-to-r from-[rgba(60,40,25,0.70)] to-[rgba(48,32,20,0.80)]">
+              <span className="text-xs font-bold text-[rgba(220,180,130,0.95)] opacity-60">{c.experienceActive}</span>
+              {isActive !== null && (
+                <span className="w-2.5 h-2.5 rounded-full" style={{background: isActive ? "rgba(60,190,120,1)" : "rgba(255,120,120,1)"}} />
+              )}
             </div>
           </div>
-        ) : null}
+        )}
 
-        <section style={S.hero} className="mw-hero">
-          <div style={S.heroGlow} className="mw-heroGlow" />
-          <div style={S.paperNoise} />
+        {/* Section principale */}
+        <section className="mw-hero relative mt-2 rounded-2xl border border-[rgba(210,140,70,0.22)] bg-gradient-to-br from-[rgba(48,32,20,0.70)] to-[rgba(38,25,16,0.85)] shadow-xl p-6 overflow-hidden">
+          <div className="mw-heroGlow absolute inset-x-0 -top-20 h-48 pointer-events-none opacity-85 z-0" style={{background: "radial-gradient(ellipse 60% 50% at 40% 55%, rgba(210,140,70,0.45), transparent 60%),radial-gradient(ellipse 50% 40% at 65% 45%, rgba(180,100,50,0.35), transparent 65%)", filter: "blur(12px)"}} />
+          <div className="absolute inset-0 pointer-events-none z-0 opacity-35 mix-blend-overlay" style={{background: "radial-gradient(circle 3px at 20% 30%, rgba(210,150,90,0.25), transparent),radial-gradient(circle 2px at 65% 45%, rgba(180,120,70,0.22), transparent),radial-gradient(circle 4px at 85% 70%, rgba(210,140,70,0.28), transparent),radial-gradient(circle 2px at 40% 80%, rgba(190,130,80,0.20), transparent),repeating-linear-gradient(90deg, transparent 0, rgba(210,150,90,0.04) 1px, transparent 2px, transparent 8px),repeating-linear-gradient(0deg, transparent 0, rgba(180,120,70,0.03) 1px, transparent 2px, transparent 12px)"}} />
 
           <audio ref={audioRef} src={audioUrl ?? undefined} />
 
-          {error ? (
-            <div style={S.alert}>
-              <div style={S.alertTitle}>{c.errTitle}</div>
-              <div style={S.alertText}>{error}</div>
+          {error && (
+            <div className="mw-card p-4 mb-4 border border-red-300 text-red-200">
+              <div className="font-extrabold mb-1 text-[rgba(240,160,140,1)]">{c.errTitle}</div>
+              <div className="opacity-90 text-[rgba(220,190,170,0.95)]">{error}</div>
             </div>
-          ) : null}
+          )}
 
           {mode === "choice" ? (
-            <div style={S.choiceWrap} className="mw-choiceWrap">
-              <div style={S.choiceEyebrow} className="mw-choiceEyebrow">{c.choiceEyebrow}</div>
-
-              <div style={S.choiceTitleMain} className="mw-choiceTitleMain">
-                {c.choiceTitle1}
-                <br />
-                {c.choiceTitle2}
-              </div>
-
-              <div style={S.choiceIntro} className="mw-choiceIntro">
-                {c.choiceIntro}
-              </div>
-
-              <div style={S.choiceButtonsRow} className="mw-choiceButtonsRow">
+            <div className="mw-choiceWrap grid gap-5 justify-items-center text-center p-6 w-full">
+              <div className="mw-choiceEyebrow text-xs uppercase tracking-widest text-[rgba(205,175,145,0.62)] font-semibold">{c.choiceEyebrow}</div>
+              <div className="mw-choiceTitleMain text-3xl md:text-5xl font-extrabold text-[rgba(243,236,228,0.98)] max-w-full text-shadow-lg overflow-wrap-anywhere">{c.choiceTitle1}<br />{c.choiceTitle2}</div>
+              <div className="mw-choiceIntro text-lg text-[rgba(223,203,182,0.88)] leading-relaxed max-w-2xl mx-auto">{c.choiceIntro}</div>
+              <div className="mw-choiceButtonsRow flex flex-wrap justify-center gap-3 w-full mt-2">
                 <button
                   type="button"
-                  className="mw-choiceButton"
-                  style={{
-                    ...S.choiceButtonPrimary,
-                    opacity: isAnySealed ? 0.45 : 1,
-                    cursor: isAnySealed ? "not-allowed" : "pointer",
-                  }}
+                  className="mw-btn-primary mw-choiceButton w-full max-w-xs py-3 text-sm uppercase font-bold"
+                  style={{opacity: isAnySealed ? 0.45 : 1, cursor: isAnySealed ? "not-allowed" : "pointer"}}
                   onClick={openRecordedVoice}
                   disabled={isAnySealed}
                 >
                   {c.voixEnregistree}
                 </button>
-
                 <button
                   type="button"
-                  className="mw-choiceButton"
-                  style={{
-                    ...S.choiceButtonSecondary,
-                    opacity: isRecordedSealed || isMurmuresSealed ? 0.45 : 1,
-                    cursor:
-                      isRecordedSealed || isMurmuresSealed
-                        ? "not-allowed"
-                        : "pointer",
-                  }}
+                  className="mw-btn-ghost mw-choiceButton w-full max-w-xs py-3 text-sm uppercase font-bold"
+                  style={{opacity: isRecordedSealed || isMurmuresSealed ? 0.45 : 1, cursor: isRecordedSealed || isMurmuresSealed ? "not-allowed" : "pointer"}}
                   onClick={openMurmures}
                   disabled={isRecordedSealed || isMurmuresSealed}
                 >
                   {c.murmuresIA}
                 </button>
               </div>
-
-              {isAnySealed ? (
-                <div style={S.choiceFootnote} className="mw-choiceFootnote">{c.dejaScelle}</div>
-              ) : null}
-
+              {isAnySealed && (
+                <div className="mw-choiceFootnote text-lg font-extrabold text-[rgba(255,230,196,0.98)] bg-gradient-to-r from-[rgba(95,60,35,0.72)] to-[rgba(78,47,27,0.82)] rounded-full border border-[rgba(230,175,120,0.40)] px-6 py-2 mt-2 animate-pulse">{c.dejaScelle}</div>
+              )}
             </div>
           ) : (
-          <>
-          <div style={S.messageWrap} className="mw-messageWrap">
-            {!typed && !loading && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "rgba(230,200,170,0.92)",
-                  fontSize: 16,
-                  lineHeight: 1.6,
-                  marginBottom: 8,
-                }}
-              >
-                {c.messageAttend}
+            <>
+              <div className="mw-messageWrap grid gap-3 min-h-[220px]">
+                {!typed && !loading && (
+                  <div className="text-center text-[rgba(230,200,170,0.92)] text-base mb-2">{c.messageAttend}</div>
+                )}
+                {loading && (
+                  <div className="text-center text-[rgba(220,190,170,0.9)] text-base mb-2">{c.messageArrive}</div>
+                )}
+                {typed ? (
+                  <div key={messageKey} className={`mw-messageCard relative rounded-2xl border border-[rgba(210,150,90,0.28)] bg-gradient-to-br from-[rgba(55,38,25,0.85)] to-[rgba(45,30,20,0.92)] shadow-lg p-6 overflow-hidden ${isPlaying ? "animate-pulse" : ""}`}>
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl z-0" style={{background: "linear-gradient(110deg, transparent 40%, rgba(210,160,110,0.22) 50%, transparent 60%)", animation: "mw-shimmer 6s ease-in-out infinite"}} />
+                    <div className="mw-messageTitle font-extrabold mb-3 text-[rgba(220,180,130,1)] text-lg z-10 relative">{c.messageTitle}</div>
+                    <div className="mw-messageText text-base font-semibold text-[rgba(235,215,195,0.98)] z-10 relative whitespace-pre-wrap">
+                      <span>{typed}</span>
+                      <span className="mw-caret ml-1 opacity-65 text-[rgba(210,160,110,0.95)]" aria-hidden>▍</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mw-placeholder flex items-center gap-4 p-6 rounded-2xl border border-[rgba(210,150,90,0.22)] bg-gradient-to-br from-[rgba(48,32,20,0.65)] to-[rgba(38,25,16,0.75)] shadow-lg">
+                    <div className="mw-placeholderMark w-12 h-12 rounded-lg flex items-center justify-center font-extrabold text-2xl bg-gradient-to-br from-[rgba(220,160,100,1)] via-[rgba(180,110,60,1)] to-[rgba(140,80,40,1)] text-[rgba(30,18,10,1)] shadow-lg">✦</div>
+                    <div className="grid gap-1">
+                      <div className="mw-placeholderTitle font-extrabold text-base text-[rgba(230,200,170,1)]">{c.placeholderTitle}</div>
+                      <div className="mw-placeholderText text-[rgba(210,185,160,0.95)] text-sm">{c.placeholderPress} <b>{c.btnReceive}</b> {c.placeholderSuffix}</div>
+                    </div>
+                  </div>
+                )}
+                {typed && !isPlaying && !audioLoading && (
+                  <div className="text-center mt-3 text-xs text-[rgba(210,185,160,0.78)]">{c.messageCredit}</div>
+                )}
               </div>
-            )}
-
-            {loading && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "rgba(220,190,170,0.9)",
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  marginBottom: 8,
-                }}
-              >
-                {c.messageArrive}
-              </div>
-            )}
-
-            {typed ? (
-              <div
-                key={messageKey}
-                className={`mw-messageCard ${isPlaying ? "animate-pulse" : ""}`}
-                style={S.messageCard}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    pointerEvents: "none",
-                    overflow: "hidden",
-                    borderRadius: "inherit",
-                    zIndex: 0,
-                  }}
+              <div className="mw-actions flex gap-3 flex-wrap mt-4">
+                <button
+                  onClick={discoverMessage}
+                  disabled={loading || !canUse}
+                  className="mw-btnCopper px-6 py-3 min-w-[190px] text-base font-extrabold"
+                  style={{opacity: loading || !canUse ? 0.65 : 1, cursor: loading || !canUse ? "not-allowed" : "pointer"}}
                 >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: "-100% -200%",
-                      background:
-                        "linear-gradient(110deg, transparent 40%, rgba(210,160,110,0.22) 50%, transparent 60%)",
-                      animation: "mw-shimmer 6s ease-in-out infinite",
-                    }}
-                  />
-                </div>
-
-                <div
-                  style={{ ...S.messageTitle, position: "relative", zIndex: 1 }}
-                  className="mw-messageTitle"
+                  <span className="relative">{loading ? c.btnCreating : c.btnReceive}</span>
+                </button>
+                <button
+                  onClick={toggleAudio}
+                  disabled={!typed || audioLoading}
+                  className="mw-btnGhost px-6 py-3 text-base font-bold"
+                  style={{opacity: typed && !audioLoading ? 1 : 0.55, cursor: typed && !audioLoading ? "pointer" : "not-allowed"}}
+                  title="Lecture audio"
                 >
-                  {c.messageTitle}
-                </div>
-
-                <div
-                  style={{ ...S.messageText, position: "relative", zIndex: 1 }}
-                  className="mw-messageText"
-                >
-                  <span>{typed}</span>
-                  <span className="mw-caret" style={S.caret} aria-hidden>
-                    ▍
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div style={S.placeholder} className="mw-placeholder">
-                <div style={S.placeholderMark} className="mw-placeholderMark">
-                  ✦
-                </div>
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div
-                    style={S.placeholderTitle}
-                    className="mw-placeholderTitle"
-                  >
-                    {c.placeholderTitle}
-                  </div>
-                  <div style={S.placeholderText} className="mw-placeholderText">
-                    {c.placeholderPress} <b>{c.btnReceive}</b> {c.placeholderSuffix}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {typed && !isPlaying && !audioLoading && (
-              <div
-                style={{
-                  textAlign: "center",
-                  marginTop: 14,
-                  fontSize: 13,
-                  color: "rgba(210,185,160,0.78)",
-                  lineHeight: 1.5,
-                }}
-              >
-                {c.messageCredit}
-              </div>
-            )}
-          </div>
-
-          <div style={S.actions} className="mw-actions">
-            <button
-              onClick={discoverMessage}
-              disabled={loading || !canUse}
-              className="mw-btnCopper"
-              style={{
-                ...S.btnCopper,
-                opacity: loading || !canUse ? 0.65 : 1,
-                cursor: loading || !canUse ? "not-allowed" : "pointer",
-              }}
-            >
-              <span style={{ position: "relative" }}>
-                {loading ? c.btnCreating : c.btnReceive}
-              </span>
-            </button>
-
-            <button
-              onClick={toggleAudio}
-              disabled={!typed || audioLoading}
-              className="mw-btnGhost"
-              style={{
-                ...S.btnGhost,
-                opacity: typed && !audioLoading ? 1 : 0.55,
-                cursor: typed && !audioLoading ? "pointer" : "not-allowed",
-              }}
-              title="Lecture audio"
-            >
-              {buttonLabel}
-            </button>
-
-            <button
-              onClick={() => {
-                stopAudio(true);
-                setAudioUrl(null);
-                setTyped("");
-                setMessage("");
-                setError(null);
-                setMode("choice");
-              }}
-              className="mw-btnGhost"
-              style={S.btnGhost}
-            >
-              {c.btnBack}
-            </button>
-          </div>
-
-          {bijou && !canUse && bijou.credits_restants === 0 ? (
-            <div style={{ ...S.rechargeContainer, marginTop: 20 }}>
-              <div style={S.rechargeCard}>
-                <div style={S.rechargeIcon}>⚡</div>
-                <div style={S.rechargeMeta}>
-                  <div style={S.rechargeTitle}>
-                    {c.rechargeTitle}
-                  </div>
-                  <div style={S.rechargeText}>
-                    {c.rechargeText}
-                  </div>
-                </div>
+                  {buttonLabel}
+                </button>
                 <button
                   onClick={() => {
-                    window.location.href = `/recharge/${id_bijou}`;
+                    stopAudio(true);
+                    setAudioUrl(null);
+                    setTyped("");
+                    setMessage("");
+                    setError(null);
+                    setMode("choice");
                   }}
-                  style={S.rechargeBtn}
-                  className="mw-rechargeBtn"
+                  className="mw-btnGhost px-6 py-3 text-base font-bold"
                 >
-                  {c.rechargeCta}
+                  {c.btnBack}
                 </button>
               </div>
-            </div>
-          ) : null}
-          </>
+              {bijou && !canUse && bijou.credits_restants === 0 && (
+                <div className="mt-6">
+                  <div className="mw-card flex items-center gap-4 p-5 border border-[rgba(255,150,80,0.35)] bg-gradient-to-br from-[rgba(80,45,25,0.85)] to-[rgba(65,35,15,0.92)] shadow-lg">
+                    <div className="text-2xl">⚡</div>
+                    <div className="flex-1 grid gap-1">
+                      <div className="font-extrabold text-base text-[rgba(255,200,140,1)]">{c.rechargeTitle}</div>
+                      <div className="text-sm text-[rgba(220,175,130,0.95)]">{c.rechargeText}</div>
+                    </div>
+                    <button
+                      onClick={() => { window.location.href = `/recharge/${id_bijou}`; }}
+                      className="mw-rechargeBtn px-5 py-2 rounded-lg font-extrabold text-sm bg-gradient-to-r from-[rgba(255,160,90,0.95)] to-[rgba(220,130,60,0.95)] text-[rgba(35,20,10,1)] border border-[rgba(255,150,80,0.45)] shadow"
+                    >
+                      {c.rechargeCta}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
-
       <PremiumCss />
     </main>
   );
