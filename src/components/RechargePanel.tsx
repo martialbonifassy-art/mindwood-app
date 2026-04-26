@@ -23,6 +23,7 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
     setLocale(getLocaleFromHost(window.location.hostname));
   }, []);
   const t = useTranslations(locale);
+  const formatPrice = (amount: number) => (locale === "en" ? `$${amount}` : `${amount}€`);
 
   async function handleRecharge(credits: number) {
     if (loading) return;
@@ -34,7 +35,7 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_bijou, credits }),
+        body: JSON.stringify({ id_bijou, credits, locale }),
       });
 
       if (!res.ok) {
@@ -93,8 +94,8 @@ export default function RechargePanel({ id_bijou, currentCredits = 0 }: Recharge
             </div>
 
             <div style={S.priceSection}>
-              <div style={S.price}>{pkg.price}€</div>
-              <div style={S.pricePerMessage}>{(pkg.price / pkg.credits).toFixed(2)}€ / {locale === "fr" ? "message" : "message"}</div>
+              <div style={S.price}>{formatPrice(pkg.price)}</div>
+              <div style={S.pricePerMessage}>{formatPrice(Number((pkg.price / pkg.credits).toFixed(2)))} / {locale === "fr" ? "message" : "message"}</div>
             </div>
 
             <button

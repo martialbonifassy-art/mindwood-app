@@ -37,7 +37,7 @@ const fade = {
 };
 
 const softButton =
-  "inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm tracking-[0.24em] text-stone-100 uppercase backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/10 px-5 py-3 text-center text-sm uppercase tracking-[0.14em] text-stone-100 backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40 whitespace-normal leading-relaxed sm:w-auto sm:px-6 sm:tracking-[0.24em]";
 const COPY = {
   fr: {
     arrivalText: "Ce bijou contient quelque chose pour vous.",
@@ -91,7 +91,7 @@ const COPY = {
     checkingBtn: "Vérification…",
     closeBtn: "Fermer",
     replayBtn: "Réécouter",
-    paymentNote: "Le paiement s’ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.",
+    paymentNote: "Le paiement s’ouvrira puis vous reviendrez automatiquement sur Grain Atelier une fois terminé.",
     rechargeEyebrow: "Écoutes épuisées",
     rechargeTitle: "Ce murmure peut encore revivre.",
     rechargeText: "Toutes les écoutes ont été utilisées. Ouvrez 10 nouvelles écoutes pour 5€ puis revenez ici pour reprendre le murmure.",
@@ -146,16 +146,16 @@ const COPY = {
     outroTextNormal: "This whisper is now part of you.",
     outroSubtextRecharge: "To revive it, you can open 10 new listens.",
     outroSubtextNormal: "It will remain here, sealed in the jewel.",
-    reactivateBtn: "Reactivate 10 listens – €5",
+    reactivateBtn: "Reactivate 10 listens – $5",
     openingBtn: "Opening…",
     paidBtn: "I’ve paid, resume listening",
     checkingBtn: "Checking…",
     closeBtn: "Close",
     replayBtn: "Listen again",
-    paymentNote: "Payment will open and you’ll return to Mindwood automatically once done.",
+    paymentNote: "Payment will open and you’ll return to Grain Atelier automatically once done.",
     rechargeEyebrow: "Listens exhausted",
     rechargeTitle: "This whisper can live again.",
-    rechargeText: "All listens have been used. Open 10 new listens for €5, then come back here to resume the whisper.",
+    rechargeText: "All listens have been used. Open 10 new listens for $5, then come back here to resume the whisper.",
     errorEyebrow: "Cannot open",
     errorTitle: "This whisper could not be opened correctly.",
     errorDefault: "The whisper may be unavailable, already expired, or still being prepared.",
@@ -473,6 +473,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
           id_bijou: id,
           credits: 10,
           kind: "credits",
+          locale,
         }),
       });
 
@@ -513,12 +514,12 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
   const showRechargeOnOutro = showCounter && safeRemaining === 0;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#120d0a] text-stone-100">
+    <main className="relative min-h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#120d0a] text-stone-100">
       <WoodBackground />
       <SoftNoise />
       <FloatingGlow />
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
+      <div className="relative z-10 flex min-h-[100dvh] items-start justify-center px-4 py-6 sm:items-center sm:px-6 sm:py-10">
         <div className="mx-auto w-full max-w-3xl">
           {isLoading ? (
             <BootScreen />
@@ -611,7 +612,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
                     </div>
                   </div>
 
-                  <div className="mt-12 flex items-center justify-center gap-4">
+                  <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
                     <button
                       className={softButton}
                       onClick={() => {
@@ -782,7 +783,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
                     {errorMessage ||
                       c.errorDefault}
                   </p>
-                  <div className="mt-10 flex items-center justify-center gap-4">
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                     <button className={softButton} onClick={() => window.location.reload()}>
                       {c.retryBtn}
                     </button>

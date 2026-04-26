@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getLocaleFromHost, type Locale } from "@/lib/i18n";
 
+// Helper pour choisir le domaine selon la locale
+function getBaseUrlForLocale(locale: Locale) {
+  return locale === "fr"
+    ? "https://appadli.fr"
+    : "https://appadli.com";
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-01-28.clover",
 });
@@ -100,12 +107,8 @@ export async function POST(req: Request) {
 
     const amount = PACKAGES[body.credits as 10 | 20];
 
-    const reqUrl = new URL(req.url);
-    const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
-    const forwardedProto = req.headers.get("x-forwarded-proto") || reqUrl.protocol.replace(":", "");
-    const requestOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : reqUrl.origin;
-    const baseUrl = requestOrigin || process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : reqUrl.origin);
+    // Utilise le domaine selon la locale détectée
+    const baseUrl = getBaseUrlForLocale(locale);
 
     const stripeLocale: Stripe.Checkout.SessionCreateParams.Locale =
       locale === "en" ? "en" : "fr";

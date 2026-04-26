@@ -4,7 +4,11 @@ export type Locale = "fr" | "en";
 
 export function getLocaleFromHost(host: string | null): Locale {
   if (!host) return "fr";
-  if (host.includes(".com")) return "en";
+  if (host.endsWith("appadli.com")) return "en";
+  if (host.endsWith("appadli.fr")) return "fr";
+  // fallback: .com = en, .fr = fr
+  if (host.endsWith(".com")) return "en";
+  if (host.endsWith(".fr")) return "fr";
   return "fr";
 }
 

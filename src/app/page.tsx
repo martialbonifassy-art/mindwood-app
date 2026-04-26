@@ -12,13 +12,13 @@ export default async function Home() {
           subtitle: "Open your jewel experience directly.",
           title: "Direct access",
           text: "No manual input is required.",
-          hint: "English version (.com)",
+          hint: "English version (appadli.com)",
         }
       : {
           subtitle: "Ouvrez directement l'experience de votre bijou.",
-          title: "Acces direct",
+          title: "Accès direct",
           text: "Aucune saisie manuelle n'est requise.",
-          hint: "Version francaise (.fr)",
+          hint: "Version française (appadli.fr)",
         };
 
   return (

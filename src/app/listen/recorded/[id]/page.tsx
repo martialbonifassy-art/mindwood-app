@@ -37,7 +37,7 @@ const fade = {
 }
 
 const softButton =
-  'inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm tracking-[0.24em] text-stone-100 uppercase backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40'
+  'inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/10 px-5 py-3 text-center text-sm uppercase tracking-[0.14em] text-stone-100 backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40 whitespace-normal leading-relaxed sm:w-auto sm:px-6 sm:tracking-[0.24em]'
 
 export default function ListenRecordedPage() {
   const params = useParams()
@@ -412,6 +412,7 @@ export default function ListenRecordedPage() {
           id_bijou: id,
           credits: 10,
           kind: 'lectures',
+          locale: window.location.hostname.includes('.com') ? 'en' : 'fr',
         }),
       })
 
@@ -455,12 +456,12 @@ export default function ListenRecordedPage() {
   const showRechargeOnOutro = showCounter && safeRemaining === 0
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#120d0a] text-stone-100">
+    <main className="relative min-h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#120d0a] text-stone-100">
       <WoodBackground />
       <SoftNoise />
       <FloatingGlow />
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
+      <div className="relative z-10 flex min-h-[100dvh] items-start justify-center px-4 py-6 sm:items-center sm:px-6 sm:py-10">
         <div className="mx-auto w-full max-w-3xl">
           {isLoading ? (
             <BootScreen />
@@ -582,7 +583,7 @@ export default function ListenRecordedPage() {
                     </div>
                   </div>
 
-                  <div className="mt-12 flex items-center justify-center gap-4">
+                  <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
                     <button
                       className={softButton}
                       onClick={() => {
@@ -698,7 +699,7 @@ export default function ListenRecordedPage() {
                   {showRechargeOnOutro ? (
                     <>
                       <p className="mx-auto mt-8 max-w-md text-sm leading-7 text-stone-400">
-                        Le paiement s’ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.
+                        Le paiement s’ouvrira puis vous reviendrez automatiquement sur Grain Atelier une fois terminé.
                       </p>
                       {rechargeMessage ? (
                         <p className="mx-auto mt-6 max-w-md text-sm leading-7 text-amber-200/90">
@@ -749,7 +750,7 @@ export default function ListenRecordedPage() {
                   </div>
 
                   <p className="mx-auto mt-8 max-w-md text-sm leading-7 text-stone-400">
-                    Le paiement s’ouvrira puis vous reviendrez automatiquement sur Mindwood une fois terminé.
+                    Le paiement s’ouvrira puis vous reviendrez automatiquement sur Grain Atelier une fois terminé.
                   </p>
 
                   {rechargeMessage ? (
@@ -775,7 +776,7 @@ export default function ListenRecordedPage() {
                     {errorMessage ||
                       'Le message est peut-être indisponible, déjà expiré ou en cours de préparation.'}
                   </p>
-                  <div className="mt-10 flex items-center justify-center gap-4">
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                     <button className={softButton} onClick={() => window.location.reload()}>
                       Réessayer
                     </button>

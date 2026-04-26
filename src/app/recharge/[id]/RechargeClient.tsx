@@ -74,6 +74,7 @@ export default function RechargeClient() {
   const router = useRouter();
   const locale = useLocale();
   const c = COPY[locale];
+  const formatPrice = (amount: number) => (locale === "en" ? `$${amount}` : `${amount}€`);
   const [bijou, setBijou] = useState<BijouRow | null>(null);
   const [voix, setVoix] = useState<VoixEnregistree | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +132,7 @@ export default function RechargeClient() {
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_bijou, credits: amount, kind }),
+        body: JSON.stringify({ id_bijou, credits: amount, kind, locale }),
       });
 
       if (!res.ok) {
@@ -213,7 +214,7 @@ export default function RechargeClient() {
                   disabled={processing}
                   style={S.packageBtn}
                 >
-                  <div style={S.pkgPrice}>5€</div>
+                  <div style={S.pkgPrice}>{formatPrice(5)}</div>
                   <div style={S.pkgDesc}>
                     {rechargeType === "lectures" ? `10 ${c.lecturesPack}` : `10 ${c.messagesPack}`}
                   </div>
@@ -223,7 +224,7 @@ export default function RechargeClient() {
                   disabled={processing}
                   style={{ ...S.packageBtn, ...S.packageBtnPopular }}
                 >
-                  <div style={S.pkgPrice}>10€</div>
+                  <div style={S.pkgPrice}>{formatPrice(10)}</div>
                   <div style={S.pkgDesc}>
                     {rechargeType === "lectures" ? `20 ${c.lecturesPack}` : `20 ${c.messagesPack}`}
                   </div>
@@ -277,8 +278,8 @@ export default function RechargeClient() {
 
 const S: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: "100vh",
-    padding: 22,
+    minHeight: "100dvh",
+    padding: "clamp(12px, 4vw, 22px)",
     fontFamily: "system-ui",
     color: "rgba(245,235,225,0.98)",
     position: "relative",
@@ -302,7 +303,7 @@ const S: Record<string, React.CSSProperties> = {
       "inset 0 -2px 12px rgba(0,0,0,0.45)",
     backdropFilter: "blur(20px)",
     overflow: "hidden",
-    padding: 40,
+    padding: "clamp(20px, 4vw, 40px)",
     position: "relative",
   },
   content: {
@@ -346,7 +347,7 @@ const S: Record<string, React.CSSProperties> = {
     gap: 20,
   },
   optionCard: {
-    padding: 28,
+    padding: "clamp(18px, 4vw, 28px)",
     borderRadius: 24,
     border: "1.5px solid rgba(210,150,90,0.28)",
     background: "linear-gradient(135deg, rgba(55,38,25,0.85) 0%, rgba(45,30,20,0.92) 100%)",
@@ -376,7 +377,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   packagesGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
     gap: 12,
     marginTop: 8,
   },

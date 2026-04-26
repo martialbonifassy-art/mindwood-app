@@ -750,30 +750,32 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
           />
         </div>
 
-        <div style={S.topBar} className="mw-topBar">
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={S.kicker} className="mw-kicker">
-              {c.kicker}
+        {mode !== "choice" ? (
+          <div style={S.topBar} className="mw-topBar">
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={S.kicker} className="mw-kicker">
+                {c.kicker}
+              </div>
+              <h1 style={S.h1}>{c.h1}</h1>
             </div>
-            <h1 style={S.h1}>{c.h1}</h1>
-          </div>
 
-          <div style={S.miniStats} className="mw-miniStats">
-            <span style={{ ...S.miniPill, opacity: 0.6 }}>
-              {c.experienceActive}
-            </span>
-            {isActive !== null ? (
-              <span
-                style={{
-                  ...S.dot,
-                  background: isActive
-                    ? "rgba(60,190,120,1)"
-                    : "rgba(255,120,120,1)",
-                }}
-              />
-            ) : null}
+            <div style={S.miniStats} className="mw-miniStats">
+              <span style={{ ...S.miniPill, opacity: 0.6 }}>
+                {c.experienceActive}
+              </span>
+              {isActive !== null ? (
+                <span
+                  style={{
+                    ...S.dot,
+                    background: isActive
+                      ? "rgba(60,190,120,1)"
+                      : "rgba(255,120,120,1)",
+                  }}
+                />
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <section style={S.hero} className="mw-hero">
           <div style={S.heroGlow} className="mw-heroGlow" />
@@ -789,35 +791,37 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
           ) : null}
 
           {mode === "choice" ? (
-            <div style={S.choiceWrap}>
-              <div style={S.choiceEyebrow}>{c.choiceEyebrow}</div>
+            <div style={S.choiceWrap} className="mw-choiceWrap">
+              <div style={S.choiceEyebrow} className="mw-choiceEyebrow">{c.choiceEyebrow}</div>
 
-              <div style={S.choiceTitleMain}>
+              <div style={S.choiceTitleMain} className="mw-choiceTitleMain">
                 {c.choiceTitle1}
                 <br />
                 {c.choiceTitle2}
               </div>
 
-              <div style={S.choiceIntro}>
+              <div style={S.choiceIntro} className="mw-choiceIntro">
                 {c.choiceIntro}
               </div>
 
-              <div style={S.choiceButtonsRow}>
+              <div style={S.choiceButtonsRow} className="mw-choiceButtonsRow">
                 <button
                   type="button"
+                  className="mw-choiceButton"
                   style={{
                     ...S.choiceButtonPrimary,
-                    opacity: isMurmuresSealed ? 0.45 : 1,
-                    cursor: isMurmuresSealed ? "not-allowed" : "pointer",
+                    opacity: isAnySealed ? 0.45 : 1,
+                    cursor: isAnySealed ? "not-allowed" : "pointer",
                   }}
                   onClick={openRecordedVoice}
-                  disabled={isMurmuresSealed}
+                  disabled={isAnySealed}
                 >
                   {c.voixEnregistree}
                 </button>
 
                 <button
                   type="button"
+                  className="mw-choiceButton"
                   style={{
                     ...S.choiceButtonSecondary,
                     opacity: isRecordedSealed || isMurmuresSealed ? 0.45 : 1,
@@ -834,7 +838,7 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
               </div>
 
               {isAnySealed ? (
-                <div style={S.choiceFootnote}>{c.dejaScelle}</div>
+                <div style={S.choiceFootnote} className="mw-choiceFootnote">{c.dejaScelle}</div>
               ) : null}
 
             </div>
@@ -1192,6 +1196,42 @@ function PremiumCss() {
         .mw-hero { padding: 14px; }
         .mw-messageCard { padding: 14px; }
         .mw-heroGlow { height: 150px; }
+
+        .mw-choiceWrap {
+          padding: 18px 2px 10px !important;
+          gap: 14px !important;
+        }
+        .mw-choiceEyebrow {
+          letter-spacing: 2.4px !important;
+          font-size: 11px !important;
+        }
+        .mw-choiceTitleMain {
+          font-size: 34px !important;
+          line-height: 1.2 !important;
+          max-width: 100% !important;
+        }
+        .mw-choiceIntro {
+          font-size: 17px !important;
+          line-height: 1.45 !important;
+          max-width: 100% !important;
+        }
+        .mw-choiceButtonsRow {
+          width: 100% !important;
+          gap: 10px !important;
+        }
+        .mw-choiceButton {
+          width: 100% !important;
+          min-width: 0 !important;
+          padding: 14px 14px !important;
+          letter-spacing: 1.5px !important;
+          font-size: 13px !important;
+        }
+        .mw-choiceFootnote {
+          font-size: 20px !important;
+          line-height: 1.2 !important;
+          padding: 10px 14px !important;
+          max-width: 100% !important;
+        }
       }
 
       @media (max-width: 480px) {
@@ -1220,6 +1260,32 @@ function PremiumCss() {
           flex-direction: column;
           gap: 12px;
         }
+
+        .mw-choiceWrap {
+          padding: 14px 0 8px !important;
+          gap: 12px !important;
+        }
+        .mw-choiceEyebrow {
+          letter-spacing: 1.8px !important;
+          font-size: 10px !important;
+        }
+        .mw-choiceTitleMain {
+          font-size: 28px !important;
+          line-height: 1.2 !important;
+        }
+        .mw-choiceIntro {
+          font-size: 15px !important;
+          line-height: 1.4 !important;
+        }
+        .mw-choiceButton {
+          font-size: 12px !important;
+          letter-spacing: 1px !important;
+          padding: 12px 12px !important;
+        }
+        .mw-choiceFootnote {
+          font-size: 17px !important;
+          padding: 8px 12px !important;
+        }
       }
 
       @media (min-width: 769px) and (max-height: 600px) {
@@ -1244,11 +1310,14 @@ function PremiumCss() {
 
 const S: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: "100vh",
-    padding: 22,
+    minHeight: "100dvh",
+    padding: "clamp(12px, 4vw, 22px)",
     fontFamily: "system-ui",
     color: "rgba(245,235,225,0.98)",
     position: "relative",
+    width: "100%",
+    maxWidth: "100%",
+    overflowX: "hidden",
     background:
       "radial-gradient(1400px 800px at 8% 0%, rgba(180,120,60,0.18), transparent 50%)," +
       "radial-gradient(1000px 700px at 92% 15%, rgba(210,140,70,0.22), transparent 55%)," +
@@ -1256,6 +1325,7 @@ const S: Record<string, React.CSSProperties> = {
       "linear-gradient(180deg, rgba(42,28,18,1) 0%, rgba(35,22,14,1) 40%, rgba(28,18,12,1) 100%)",
   },
   shell: {
+    width: "100%",
     maxWidth: 980,
     margin: "0 auto",
     borderRadius: 32,
@@ -1390,40 +1460,44 @@ const S: Record<string, React.CSSProperties> = {
     position: "relative",
     zIndex: 1,
     display: "grid",
-    gap: 20,
+    gap: "clamp(10px, 2.8vw, 20px)",
     justifyItems: "center",
     textAlign: "center",
-    padding: "36px 10px 20px",
+    padding: "clamp(12px, 3vw, 36px) 4px clamp(8px, 2.5vw, 20px)",
+    width: "100%",
   },
   choiceEyebrow: {
-    fontSize: 12,
-    letterSpacing: 6,
+    fontSize: "clamp(10px, 2.4vw, 12px)",
+    letterSpacing: "clamp(1.4px, 1vw, 6px)",
     textTransform: "uppercase",
     color: "rgba(205,175,145,0.62)",
     fontWeight: 600,
   },
   choiceTitleMain: {
-    fontSize: 52,
-    lineHeight: 1.14,
-    letterSpacing: -0.8,
+    fontSize: "clamp(30px, 11vw, 52px)",
+    lineHeight: 1.16,
+    letterSpacing: "clamp(-0.3px, -0.08vw, -0.8px)",
     color: "rgba(243,236,228,0.98)",
-    maxWidth: 760,
+    maxWidth: "100%",
     textShadow: "0 8px 30px rgba(0,0,0,0.35)",
+    overflowWrap: "anywhere",
   },
   choiceIntro: {
     textAlign: "center",
     color: "rgba(223,203,182,0.88)",
-    fontSize: 22,
-    lineHeight: 1.55,
-    maxWidth: 820,
+    fontSize: "clamp(15px, 4.6vw, 22px)",
+    lineHeight: 1.45,
+    maxWidth: "min(820px, 100%)",
     margin: "0 auto",
+    overflowWrap: "anywhere",
   },
   choiceButtonsRow: {
     display: "flex",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 14,
+    gap: "clamp(8px, 2vw, 14px)",
     marginTop: 8,
+    width: "100%",
   },
   choiceButtonPrimary: {
     appearance: "none",
@@ -1432,13 +1506,16 @@ const S: Record<string, React.CSSProperties> = {
     background:
       "linear-gradient(135deg, rgba(245,224,196,0.96) 0%, rgba(228,196,158,0.96) 100%)",
     color: "rgba(45,28,16,0.95)",
-    fontSize: 14,
+    fontSize: "clamp(12px, 3.2vw, 14px)",
     fontWeight: 800,
-    letterSpacing: 3,
+    letterSpacing: "clamp(0.8px, 0.35vw, 3px)",
     textTransform: "uppercase",
-    padding: "16px 28px",
-    minWidth: 270,
+    padding: "clamp(12px, 2.8vw, 16px) clamp(12px, 3.2vw, 28px)",
+    width: "min(100%, 360px)",
+    minWidth: 0,
     cursor: "pointer",
+    whiteSpace: "normal",
+    lineHeight: 1.25,
     boxShadow:
       "0 18px 46px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,245,225,0.82)",
   },
@@ -1449,25 +1526,30 @@ const S: Record<string, React.CSSProperties> = {
     background:
       "linear-gradient(135deg, rgba(75,55,42,0.64) 0%, rgba(58,41,30,0.74) 100%)",
     color: "rgba(233,218,202,0.95)",
-    fontSize: 14,
+    fontSize: "clamp(12px, 3.2vw, 14px)",
     fontWeight: 700,
-    letterSpacing: 3,
+    letterSpacing: "clamp(0.8px, 0.35vw, 3px)",
     textTransform: "uppercase",
-    padding: "16px 28px",
-    minWidth: 230,
+    padding: "clamp(12px, 2.8vw, 16px) clamp(12px, 3.2vw, 28px)",
+    width: "min(100%, 360px)",
+    minWidth: 0,
     cursor: "pointer",
+    whiteSpace: "normal",
+    lineHeight: 1.25,
     boxShadow:
       "0 18px 46px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.12)",
   },
   choiceFootnote: {
     textAlign: "center",
     color: "rgba(255,230,196,0.98)",
-    fontSize: 28,
+    fontSize: "clamp(16px, 5vw, 28px)",
     lineHeight: 1.2,
     fontWeight: 900,
     letterSpacing: 0.6,
     marginTop: 14,
-    padding: "10px 22px",
+    padding: "clamp(8px, 2vw, 10px) clamp(12px, 3.2vw, 22px)",
+    maxWidth: "100%",
+    overflowWrap: "anywhere",
     borderRadius: 999,
     border: "1px solid rgba(230,175,120,0.40)",
     background:
