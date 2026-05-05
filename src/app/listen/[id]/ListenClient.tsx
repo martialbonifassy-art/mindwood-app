@@ -161,6 +161,7 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
   const id_bijou = params?.id;
 
   const c = COPY[locale];
+  const errLoading = c.errLoading;
 
   const [mode, setMode] = useState<"choice" | "ia">("choice");
 
@@ -196,7 +197,7 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
       const json = (await res.json().catch(() => ({}))) as ListenLoadResponse;
 
       if (!res.ok || !json.success || !json.data?.bijou) {
-        throw new Error(json.error || c.errLoading);
+        throw new Error(json.error || errLoading);
       }
 
       setBijou(json.data.bijou);
@@ -204,12 +205,11 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
 
       return json.data;
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : c.errLoading;
+      const message = error instanceof Error ? error.message : errLoading;
       setError(message);
       return null;
     }
-  }, [id_bijou]);
+  }, [errLoading, id_bijou]);
 
   useEffect(() => {
     if (!id_bijou) return;
@@ -248,8 +248,9 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
   }, [message]);
 
   useEffect(() => {
+    const audio = audioRef.current;
+
     return () => {
-      const audio = audioRef.current;
       if (!audio) return;
       try {
         audio.pause();
@@ -1538,3 +1539,5 @@ const S: Record<string, React.CSSProperties> = {
     transition: "all 200ms cubic-bezier(.2,.7,.2,1)",
   },
 };
+
+void S;
