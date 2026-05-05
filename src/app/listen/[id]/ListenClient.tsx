@@ -71,8 +71,9 @@ const COPY = {
     choiceTitle1: "Choisissez l'expérience",
     choiceTitle2: "que vous souhaitez ouvrir.",
     choiceIntro:
-      "Voix enregistrée pour écouter un message réel, ou Murmures IA pour recevoir un message généré selon votre thème et votre paramétrage.",
+      "Voix enregistrée pour écouter un message réel, Capsule spacio-temporelle pour confier une voix au temps, ou Murmures IA pour recevoir un message généré selon votre thème et votre paramétrage.",
     voixEnregistree: "Voix enregistrée",
+    capsuleSpacioTemporelle: "Capsule spacio-temporelle",
     murmuresIA: "Murmures IA",
     dejaScelle: "Bijou déjà scellé",
     messageAttend: "Un message vous attend…",
@@ -115,8 +116,9 @@ const COPY = {
     choiceTitle1: "Choose your experience",
     choiceTitle2: "to open.",
     choiceIntro:
-      "Recorded voice to listen to a real message, or AI Whispers to receive a message generated from your theme and settings.",
+      "Recorded voice to hear a real message, Space-Time Capsule to entrust a voice to time, or AI Whispers to receive a message generated from your theme and settings.",
     voixEnregistree: "Recorded voice",
+    capsuleSpacioTemporelle: "Space-Time Capsule",
     murmuresIA: "AI Whispers",
     dejaScelle: "Jewel already sealed",
     messageAttend: "A message awaits you…",
@@ -213,6 +215,14 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
     if (!id_bijou) return;
     void silentLoad();
   }, [id_bijou, silentLoad]);
+
+  useEffect(() => {
+    const sealedType = String(bijou?.type_bijou ?? "");
+    if (!id_bijou) return;
+    if (sealedType === "voix_enregistree" || sealedType === "voix_enregistrée") {
+      router.replace(`/listen/recorded/${id_bijou}`);
+    }
+  }, [bijou?.type_bijou, id_bijou, router]);
 
   useEffect(() => {
     if (!message) {
@@ -621,6 +631,20 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
     router.push(`/setup/${id_bijou}/firstname`);
   }
 
+  function openCapsule() {
+    if (!id_bijou) {
+      setError(c.errNoId);
+      return;
+    }
+
+    if (isMurmuresSealed) {
+      setError(c.errMurmuresSealedVoix);
+      return;
+    }
+
+    router.push(`/setup/${id_bijou}/firstname?variant=capsule`);
+  }
+
   function openMurmures() {
     if (!id_bijou) {
       setError(c.errNoId);
@@ -695,6 +719,15 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
                   disabled={isAnySealed}
                 >
                   {c.voixEnregistree}
+                </button>
+                <button
+                  type="button"
+                  className="mw-btn-primary mw-choiceButton w-full max-w-xs py-3 text-sm uppercase font-bold"
+                  style={{opacity: isAnySealed ? 0.45 : 1, cursor: isAnySealed ? "not-allowed" : "pointer"}}
+                  onClick={openCapsule}
+                  disabled={isAnySealed}
+                >
+                  {c.capsuleSpacioTemporelle}
                 </button>
                 <button
                   type="button"

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+
+type RecordingVariant = 'standard' | 'capsule'
 
 type SetupResponse = {
   success: boolean
@@ -11,6 +13,8 @@ type SetupResponse = {
     prenom?: string | null
     type_bijou?: string | null
     langue?: 'fr' | 'en' | null
+    recordingVariant?: RecordingVariant
+    unlockAt?: string | null
   }
   error?: string
 }
@@ -27,10 +31,31 @@ const primaryButton =
 const secondaryButton =
   'inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-stone-100 transition hover:bg-white/15'
 
+function toDateTimeLocalValue(iso: string | null | undefined) {
+  if (!iso) return ''
+
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const offsetMs = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocalValue(value: string) {
+  if (!value) return null
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
+}
+
 export default function SetupFirstNamePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const id = useMemo(() => String(params?.id ?? ''), [params])
+  const requestedVariant: RecordingVariant =
+    searchParams.get('variant') === 'capsule' ? 'capsule' : 'standard'
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -38,6 +63,12 @@ export default function SetupFirstNamePage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [firstName, setFirstName] = useState('')
   const [language, setLanguage] = useState<'fr' | 'en'>('fr')
+  const [recordingVariant, setRecordingVariant] = useState<RecordingVariant>(requestedVariant)
+  const [unlockAt, setUnlockAt] = useState('')
+
+  useEffect(() => {
+    setRecordingVariant(requestedVariant)
+  }, [requestedVariant])
 
   useEffect(() => {
     let isMounted = true
@@ -67,6 +98,14 @@ export default function SetupFirstNamePage() {
 
         setFirstName(json.data.prenom ?? '')
         setLanguage(json.data.langue === 'en' ? 'en' : 'fr')
+        setRecordingVariant(
+          requestedVariant === 'capsule'
+            ? 'capsule'
+            : json.data.recordingVariant === 'capsule'
+              ? 'capsule'
+              : 'standard'
+        )
+        setUnlockAt(toDateTimeLocalValue(json.data.unlockAt))
       } catch (error) {
         if (!isMounted) return
         setErrorMessage(
@@ -82,7 +121,7 @@ export default function SetupFirstNamePage() {
     return () => {
       isMounted = false
     }
-  }, [id, router])
+  }, [id, requestedVariant, router])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -99,6 +138,17 @@ export default function SetupFirstNamePage() {
       return
     }
 
+    const unlockAtIso = recordingVariant === 'capsule' ? fromDateTimeLocalValue(unlockAt) : null
+
+    if (recordingVariant === 'capsule' && !unlockAtIso) {
+      setErrorMessage(
+        language === 'en'
+          ? 'Please choose an opening date and time.'
+          : 'Veuillez choisir une date et une heure d’ouverture.'
+      )
+      return
+    }
+
     try {
       setIsSaving(true)
       setErrorMessage('')
@@ -107,7 +157,11 @@ export default function SetupFirstNamePage() {
       const res = await fetch(`/api/setup/${id}/firstname`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom }),
+        body: JSON.stringify({
+          prenom,
+          recordingVariant,
+          unlockAt: unlockAtIso,
+        }),
       })
 
       const json = (await res.json()) as SetupResponse
@@ -119,7 +173,11 @@ export default function SetupFirstNamePage() {
       setSuccessMessage(language === 'en' ? 'Saved.' : 'Enregistré.')
 
       window.setTimeout(() => {
-        router.push(`/record/${id}`)
+        router.push(
+          recordingVariant === 'capsule'
+            ? `/record/${id}?variant=capsule`
+            : `/record/${id}`
+        )
       }, 900)
     } catch (error) {
       setErrorMessage(
@@ -146,15 +204,23 @@ export default function SetupFirstNamePage() {
           </p>
 
           <h1 className="mt-6 text-4xl leading-[1.15] text-stone-100 md:text-6xl">
-            {language === 'en'
-              ? 'The first name of the person who will receive this jewel.'
-              : 'Enregistrez le prénom de la personne qui recevra ce bijou.'}
+            {recordingVariant === 'capsule'
+              ? language === 'en'
+                ? 'Prepare the person and the opening moment of this capsule.'
+                : 'Préparez la personne et le moment d’ouverture de cette capsule.'
+              : language === 'en'
+                ? 'The first name of the person who will receive this jewel.'
+                : 'Enregistrez le prénom de la personne qui recevra ce bijou.'}
           </h1>
 
           <p className="mt-6 max-w-xl text-base leading-8 text-stone-300 md:text-lg">
-            {language === 'en'
-              ? 'This first name helps you prepare the message before recording your voice.'
-              : 'Ce prénom vous aide à préparer le message avant d’enregistrer votre voix.'}
+            {recordingVariant === 'capsule'
+              ? language === 'en'
+                ? 'This step defines who will receive the jewel and when the recorded voice will become available.'
+                : 'Cette étape définit qui recevra le bijou et à quel moment la voix enregistrée deviendra accessible.'
+              : language === 'en'
+                ? 'This first name helps you prepare the message before recording your voice.'
+                : 'Ce prénom vous aide à préparer le message avant d’enregistrer votre voix.'}
           </p>
 
           {isLoading ? (
@@ -163,6 +229,26 @@ export default function SetupFirstNamePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-12 space-y-8">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setRecordingVariant('standard')}
+                  className={`rounded-[1.4rem] border px-5 py-5 text-left transition ${recordingVariant === 'standard' ? 'border-amber-100/40 bg-amber-100/10 text-stone-50' : 'border-white/10 bg-black/20 text-stone-300 hover:border-white/20 hover:bg-black/25'}`}
+                >
+                  <div className="text-xs uppercase tracking-[0.22em] text-stone-400">{language === 'en' ? 'Recorded voice' : 'Voix enregistrée'}</div>
+                  <div className="mt-3 text-lg leading-7">{language === 'en' ? 'The message becomes available as soon as the jewel is scanned.' : 'Le message devient accessible dès que le bijou est scanné.'}</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRecordingVariant('capsule')}
+                  className={`rounded-[1.4rem] border px-5 py-5 text-left transition ${recordingVariant === 'capsule' ? 'border-amber-100/40 bg-amber-100/10 text-stone-50' : 'border-white/10 bg-black/20 text-stone-300 hover:border-white/20 hover:bg-black/25'}`}
+                >
+                  <div className="text-xs uppercase tracking-[0.22em] text-stone-400">{language === 'en' ? 'Space-Time Capsule' : 'Capsule spacio-temporelle'}</div>
+                  <div className="mt-3 text-lg leading-7">{language === 'en' ? 'Each scan shows a countdown until the chosen opening date.' : 'Chaque scan affiche un compte à rebours jusqu’à la date d’ouverture choisie.'}</div>
+                </button>
+              </div>
+
               <div className="space-y-3">
                 <label
                   htmlFor="prenom"
@@ -189,6 +275,32 @@ export default function SetupFirstNamePage() {
                     : 'Un seul prénom suffit. Il s’agit de la personne qui recevra le bijou.'}
                 </p>
               </div>
+
+              {recordingVariant === 'capsule' && (
+                <div className="space-y-3">
+                  <label
+                    htmlFor="unlockAt"
+                    className="block text-sm font-medium uppercase tracking-[0.18em] text-stone-400"
+                  >
+                    {language === 'en' ? 'Opening date and time' : 'Date et heure d’ouverture'}
+                  </label>
+
+                  <input
+                    id="unlockAt"
+                    name="unlockAt"
+                    type="datetime-local"
+                    value={unlockAt}
+                    onChange={(e) => setUnlockAt(e.target.value)}
+                    className="w-full rounded-[1.4rem] border border-amber-200/15 bg-black/20 px-5 py-5 text-xl text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-100/40 focus:bg-black/25"
+                  />
+
+                  <p className="text-sm leading-7 text-stone-400">
+                    {language === 'en'
+                      ? 'Until this exact moment, every scan will display a locked message and a countdown based on the official server time.'
+                      : 'Jusqu’à cet instant précis, chaque scan affichera un message verrouillé et un compte à rebours basé sur l’heure officielle du serveur.'}
+                  </p>
+                </div>
+              )}
 
               {errorMessage && (
                 <div className="rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-4 text-sm leading-7 text-red-100">

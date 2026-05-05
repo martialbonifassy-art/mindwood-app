@@ -6,6 +6,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+type RecordingVariant = 'standard' | 'capsule'
+
+type CapsuleMetadata = {
+  variant?: RecordingVariant
+  unlockAt?: string | null
+  countdownMessageFr?: string
+  countdownMessageEn?: string
+}
+
+function readCapsuleMetadata(raw: unknown): CapsuleMetadata {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+
+  const capsule = (raw as { recorded_voice?: unknown }).recorded_voice
+  if (!capsule || typeof capsule !== 'object' || Array.isArray(capsule)) return {}
+
+  const source = capsule as Record<string, unknown>
+
+  return {
+    variant: source.variant === 'capsule' ? 'capsule' : 'standard',
+    unlockAt: typeof source.unlockAt === 'string' ? source.unlockAt : null,
+    countdownMessageFr:
+      typeof source.countdownMessageFr === 'string' ? source.countdownMessageFr : undefined,
+    countdownMessageEn:
+      typeof source.countdownMessageEn === 'string' ? source.countdownMessageEn : undefined,
+  }
+}
+
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -22,7 +49,7 @@ export async function GET(
 
     const { data: bijou, error: bijouError } = await supabase
       .from('bijoux')
-      .select('id_bijou, type_bijou')
+      .select('id_bijou, type_bijou, langue, metadata')
       .eq('id_bijou', id)
       .maybeSingle()
 
@@ -39,6 +66,14 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    const serverNow = new Date().toISOString()
+    const capsule = readCapsuleMetadata(bijou.metadata)
+    const unlockAt = capsule.unlockAt ?? null
+    const isCapsuleLocked =
+      capsule.variant === 'capsule' &&
+      Boolean(unlockAt) &&
+      new Date(serverNow).getTime() < new Date(unlockAt as string).getTime()
 
     const { data: voice, error: voiceError } = await supabase
       .from('voix_enregistrees')
@@ -81,10 +116,20 @@ export async function GET(
       data: {
         id,
         firstName: personnalisation?.prenom ?? null,
-        audioUrl: voice.audio_url,
+        audioUrl: isCapsuleLocked ? null : voice.audio_url,
         remainingListens: voice.lectures_restantes,
         textPreview: null,
         jewelType: bijou.type_bijou,
+        serverNow,
+        capsule: {
+          variant: capsule.variant ?? 'standard',
+          isLocked: isCapsuleLocked,
+          unlockAt,
+          countdownMessage:
+            (bijou.langue ?? 'fr') === 'en'
+              ? capsule.countdownMessageEn ?? null
+              : capsule.countdownMessageFr ?? null,
+        },
       },
     })
   } catch (error) {

@@ -1,21 +1,37 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 
 type ListenPayload = {
   id: string
   firstName?: string | null
-  audioUrl: string
+  audioUrl?: string | null
   remainingListens?: number | null
   textPreview?: string | null
   jewelType?: string | null
+  serverNow?: string
+  capsule?: {
+    variant: 'standard' | 'capsule'
+    isLocked: boolean
+    unlockAt?: string | null
+    countdownMessage?: string | null
+  }
+}
+
+type CountdownState = {
+  totalMs: number
+  days: number
+  hours: number
+  minutes: number
+  seconds: number
 }
 
 type Stage =
   | 'arrival'
+  | 'capsule'
   | 'prelude'
   | 'breath'
   | 'player'
@@ -39,6 +55,23 @@ const fade = {
 const softButton =
   'inline-flex w-full items-center justify-center rounded-full border border-white/15 bg-white/10 px-5 py-3 text-center text-sm uppercase tracking-[0.14em] text-stone-100 backdrop-blur-sm transition hover:bg-white/14 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-40 whitespace-normal leading-relaxed sm:w-auto sm:px-6 sm:tracking-[0.24em]'
 
+function formatCountdown(totalMs: number): CountdownState {
+  const safeTotalMs = Math.max(0, totalMs)
+  const totalSeconds = Math.floor(safeTotalMs / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  return {
+    totalMs: safeTotalMs,
+    days,
+    hours,
+    minutes,
+    seconds,
+  }
+}
+
 export default function ListenRecordedPage() {
   const params = useParams()
   const router = useRouter()
@@ -58,6 +91,7 @@ export default function ListenRecordedPage() {
   const [isCheckingRecharge, setIsCheckingRecharge] = useState(false)
   const [rechargeMessage, setRechargeMessage] = useState('')
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false)
+  const [countdown, setCountdown] = useState<CountdownState | null>(null)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playStartedLoggedRef = useRef(false)
@@ -94,13 +128,18 @@ export default function ListenRecordedPage() {
 
         const json = (await res.json()) as ApiResponse
 
-        if (!json.success || !json.data?.audioUrl) {
+        if (!json.success || (!json.data?.audioUrl && !json.data?.capsule?.isLocked)) {
           throw new Error(json.error || 'Ce message est introuvable.')
         }
 
         if (!isMounted) return
 
         setPayload(json.data)
+
+        if (json.data.capsule?.isLocked) {
+          setStage('capsule')
+          return
+        }
 
         if (
           json.data.remainingListens !== null &&
@@ -131,6 +170,54 @@ export default function ListenRecordedPage() {
 
     return () => {
       isMounted = false
+    }
+  }, [id])
+
+  const logListenEvent = useCallback(async (event: 'play_started' | 'play_completed') => {
+    try {
+      const res = await fetch(`/api/listen/recorded/${id}/consume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event }),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok || !json.success) {
+        if (json?.error === 'CAPSULE_LOCKED') {
+          setStage('capsule')
+          return
+        }
+
+        if (json?.error === 'PLUS_D_ECOUTES') {
+          setPayload((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  remainingListens: 0,
+                }
+              : prev
+          )
+          setStage('recharge')
+          return
+        }
+
+        console.error('Consume error:', json)
+        return
+      }
+
+      if (event === 'play_started' && typeof json.remainingListens === 'number') {
+        setPayload((prev) =>
+          prev
+            ? {
+                ...prev,
+                remainingListens: json.remainingListens,
+              }
+            : prev
+        )
+      }
+    } catch (error) {
+      console.error('Consume request failed:', error)
     }
   }, [id])
 
@@ -228,13 +315,73 @@ export default function ListenRecordedPage() {
       audio.removeEventListener('error', onError)
       audioRef.current = null
     }
-  }, [payload?.audioUrl, payload?.firstName])
+  }, [logListenEvent, payload?.audioUrl, payload?.firstName])
+
+  const refreshCapsuleStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/listen/recorded/${id}`, {
+        method: 'GET',
+        cache: 'no-store',
+      })
+
+      const json = (await res.json()) as ApiResponse
+      if (!res.ok || !json.success || !json.data) return
+
+      setPayload(json.data)
+
+      if (json.data.capsule?.isLocked) {
+        setStage('capsule')
+        return
+      }
+
+      if (
+        json.data.remainingListens !== null &&
+        json.data.remainingListens !== undefined &&
+        json.data.remainingListens <= 0
+      ) {
+        setStage('recharge')
+        return
+      }
+
+      setCountdown(null)
+      setStage('arrival')
+    } catch {
+      // keep the locked screen if refresh fails
+    }
+  }, [id])
+
+  useEffect(() => {
+    if (!payload?.capsule?.isLocked || !payload.capsule.unlockAt || !payload.serverNow) {
+      setCountdown(null)
+      return
+    }
+
+    const unlockMs = new Date(payload.capsule.unlockAt).getTime()
+    const serverNowMs = new Date(payload.serverNow).getTime()
+    const startedAt = performance.now()
+
+    const updateCountdown = () => {
+      const estimatedServerNow = serverNowMs + (performance.now() - startedAt)
+      const nextCountdown = formatCountdown(unlockMs - estimatedServerNow)
+      setCountdown(nextCountdown)
+
+      if (nextCountdown.totalMs <= 0) {
+        window.clearInterval(timer)
+        void refreshCapsuleStatus()
+      }
+    }
+
+    updateCountdown()
+    const timer = window.setInterval(updateCountdown, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [payload?.capsule?.isLocked, payload?.capsule?.unlockAt, payload?.serverNow, refreshCapsuleStatus])
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    if (stage === 'arrival' || stage === 'prelude' || stage === 'recharge' || stage === 'error') {
+    if (stage === 'arrival' || stage === 'capsule' || stage === 'prelude' || stage === 'recharge' || stage === 'error') {
       audio.pause()
       if (stage !== 'recharge') {
         audio.currentTime = 0
@@ -250,49 +397,6 @@ export default function ListenRecordedPage() {
       if (breathTimeoutRef.current) window.clearTimeout(breathTimeoutRef.current)
     }
   }, [])
-
-  async function logListenEvent(event: 'play_started' | 'play_completed') {
-    try {
-      const res = await fetch(`/api/listen/recorded/${id}/consume`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event }),
-      })
-
-      const json = await res.json()
-
-      if (!res.ok || !json.success) {
-        if (json?.error === 'PLUS_D_ECOUTES') {
-          setPayload((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  remainingListens: 0,
-                }
-              : prev
-          )
-          setStage('recharge')
-          return
-        }
-
-        console.error('Consume error:', json)
-        return
-      }
-
-      if (event === 'play_started' && typeof json.remainingListens === 'number') {
-        setPayload((prev) =>
-          prev
-            ? {
-                ...prev,
-                remainingListens: json.remainingListens,
-              }
-            : prev
-        )
-      }
-    } catch (error) {
-      console.error('Consume request failed:', error)
-    }
-  }
 
   async function startPlayback() {
     const audio = audioRef.current
@@ -467,6 +571,43 @@ export default function ListenRecordedPage() {
             <BootScreen />
           ) : (
             <AnimatePresence mode="wait">
+              {stage === 'capsule' && payload?.capsule?.isLocked && (
+                <motion.section key="capsule" {...fade} className="mx-auto max-w-2xl text-center">
+                  <BrandSeal fadeOnly />
+                  <Eyebrow text="Capsule spacio-temporelle" />
+                  <p className="mx-auto max-w-xl text-3xl leading-[1.45] text-stone-100 md:text-5xl md:leading-[1.35]">
+                    Le bois garde encore le secret.
+                  </p>
+                  <p className="mx-auto mt-8 max-w-xl text-base leading-8 text-stone-300 md:text-lg">
+                    {payload.capsule.countdownMessage ?? 'Une voix vous attend ici, mais elle a été confiée au temps.'}
+                  </p>
+                  <p className="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-300 md:text-lg">
+                    Revenez lorsque le compte à rebours sera terminé : le message se dévoilera au jour choisi.
+                  </p>
+
+                  <div className="mt-12 rounded-[2rem] border border-white/15 bg-white/8 px-6 py-8 backdrop-blur-xl">
+                    <div className="text-xs uppercase tracking-[0.3em] text-stone-400">Ouverture dans</div>
+                    <div className="mt-5 text-3xl font-light leading-tight text-white md:text-5xl">
+                      {countdown
+                        ? `${countdown.days} jours · ${String(countdown.hours).padStart(2, '0')} heures · ${String(countdown.minutes).padStart(2, '0')} minutes · ${String(countdown.seconds).padStart(2, '0')} secondes`
+                        : 'Calcul en cours…'}
+                    </div>
+                    <p className="mt-5 text-sm leading-7 text-stone-400 md:text-base">
+                      Patience… cette capsule s’ouvrira au moment choisi.
+                    </p>
+                  </div>
+
+                  <div className="mt-10 flex flex-wrap justify-center gap-3">
+                    <button className={softButton} onClick={() => void refreshCapsuleStatus()}>
+                      Vérifier l’ouverture
+                    </button>
+                    <button className={softButton} onClick={closeWindow}>
+                      Fermer la fenêtre
+                    </button>
+                  </div>
+                </motion.section>
+              )}
+
               {stage === 'arrival' && payload && (
                 <section key="arrival" className="mx-auto max-w-2xl text-center">
                   <BrandSeal fadeOnly />

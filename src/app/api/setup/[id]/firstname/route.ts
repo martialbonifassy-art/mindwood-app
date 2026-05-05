@@ -12,13 +12,64 @@ type RouteContext = {
   params: Promise<{ id: string }>
 }
 
+type RecordingVariant = "standard" | "capsule"
+
+type CapsuleMetadata = {
+  variant?: RecordingVariant
+  unlockAt?: string | null
+  countdownMessageFr?: string
+  countdownMessageEn?: string
+}
+
+function readCapsuleMetadata(raw: unknown): CapsuleMetadata {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+
+  const capsule = (raw as { recorded_voice?: unknown }).recorded_voice
+  if (!capsule || typeof capsule !== "object" || Array.isArray(capsule)) return {}
+
+  const source = capsule as Record<string, unknown>
+
+  return {
+    variant: source.variant === "capsule" ? "capsule" : "standard",
+    unlockAt: typeof source.unlockAt === "string" ? source.unlockAt : null,
+    countdownMessageFr:
+      typeof source.countdownMessageFr === "string" ? source.countdownMessageFr : undefined,
+    countdownMessageEn:
+      typeof source.countdownMessageEn === "string" ? source.countdownMessageEn : undefined,
+  }
+}
+
+function buildUpdatedMetadata(raw: unknown, variant: RecordingVariant, unlockAt: string | null) {
+  const base = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? { ...(raw as Record<string, unknown>) }
+    : {}
+
+  const currentRecordedVoice =
+    base.recorded_voice && typeof base.recorded_voice === "object" && !Array.isArray(base.recorded_voice)
+      ? (base.recorded_voice as Record<string, unknown>)
+      : {}
+
+  return {
+    ...base,
+    recorded_voice: {
+      ...currentRecordedVoice,
+      variant,
+      unlockAt,
+      countdownMessageFr:
+        "Le bois garde encore le secret. Une voix vous attend ici, mais elle a été confiée au temps.",
+      countdownMessageEn:
+        "The wood is still keeping the secret. A voice is waiting here, but it has been entrusted to time.",
+    },
+  }
+}
+
 export async function GET(_req: Request, context: RouteContext) {
   const { id: id_bijou } = await context.params
 
   try {
     const { data: bijou, error: bijouError } = await supabase
       .from("bijoux")
-      .select("id_bijou, langue, type_bijou")
+      .select("id_bijou, langue, type_bijou, metadata")
       .eq("id_bijou", id_bijou)
       .maybeSingle()
 
@@ -52,6 +103,8 @@ export async function GET(_req: Request, context: RouteContext) {
       )
     }
 
+    const capsule = readCapsuleMetadata(bijou.metadata)
+
     return NextResponse.json({
       success: true,
       data: {
@@ -60,6 +113,8 @@ export async function GET(_req: Request, context: RouteContext) {
         gravure_dos: personnalisation?.gravure_dos ?? "",
         langue: bijou.langue ?? "fr",
         type_bijou: bijou.type_bijou ?? null,
+        recordingVariant: capsule.variant ?? "standard",
+        unlockAt: capsule.unlockAt ?? null,
       },
     })
   } catch (error) {
@@ -79,6 +134,8 @@ export async function POST(req: Request, context: RouteContext) {
 
     const prenom = String(body?.prenom ?? "").trim()
     const gravure_dos = String(body?.gravure_dos ?? "").trim()
+    const recordingVariant: RecordingVariant = body?.recordingVariant === "capsule" ? "capsule" : "standard"
+    const unlockAt = typeof body?.unlockAt === "string" ? body.unlockAt.trim() : ""
 
     if (!prenom || prenom.length < 2) {
       return NextResponse.json(
@@ -91,6 +148,52 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json(
         { success: false, error: "Gravure limitée à 20 caractères" },
         { status: 400 }
+      )
+    }
+
+    let normalizedUnlockAt: string | null = null
+
+    if (recordingVariant === "capsule") {
+      const parsedDate = new Date(unlockAt)
+      if (!unlockAt || Number.isNaN(parsedDate.getTime())) {
+        return NextResponse.json(
+          { success: false, error: "Date d'ouverture invalide" },
+          { status: 400 }
+        )
+      }
+
+      const now = new Date()
+      const oneYearLater = new Date(now)
+      oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
+
+      if (parsedDate.getTime() <= now.getTime()) {
+        return NextResponse.json(
+          { success: false, error: "La date d'ouverture doit être dans le futur" },
+          { status: 400 }
+        )
+      }
+
+      if (parsedDate.getTime() > oneYearLater.getTime()) {
+        return NextResponse.json(
+          { success: false, error: "La capsule ne peut pas être programmée au-delà d'un an" },
+          { status: 400 }
+        )
+      }
+
+      normalizedUnlockAt = parsedDate.toISOString()
+    }
+
+    const { data: bijou, error: bijouLookupError } = await supabase
+      .from("bijoux")
+      .select("id_bijou, metadata")
+      .eq("id_bijou", id_bijou)
+      .maybeSingle()
+
+    if (bijouLookupError || !bijou) {
+      console.error("Erreur recherche bijou:", bijouLookupError)
+      return NextResponse.json(
+        { success: false, error: "Bijou introuvable" },
+        { status: 404 }
       )
     }
 
@@ -142,12 +245,33 @@ export async function POST(req: Request, context: RouteContext) {
       }
     }
 
+    const updatedMetadata = buildUpdatedMetadata(
+      bijou.metadata,
+      recordingVariant,
+      normalizedUnlockAt
+    )
+
+    const { error: bijouUpdateError } = await supabase
+      .from("bijoux")
+      .update({ metadata: updatedMetadata })
+      .eq("id_bijou", id_bijou)
+
+    if (bijouUpdateError) {
+      console.error("Erreur update metadata bijou:", bijouUpdateError)
+      return NextResponse.json(
+        { success: false, error: "Erreur mise à jour du paramétrage capsule" },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         id_bijou,
         prenom,
         gravure_dos: gravure_dos || null,
+        recordingVariant,
+        unlockAt: normalizedUnlockAt,
       },
     })
   } catch (error) {

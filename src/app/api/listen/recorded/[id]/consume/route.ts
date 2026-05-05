@@ -6,6 +6,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function readUnlockAt(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+
+  const capsule = (raw as { recorded_voice?: unknown }).recorded_voice
+  if (!capsule || typeof capsule !== 'object' || Array.isArray(capsule)) return null
+
+  const source = capsule as Record<string, unknown>
+  if (source.variant !== 'capsule') return null
+
+  return typeof source.unlockAt === 'string' ? source.unlockAt : null
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -24,6 +36,34 @@ export async function POST(
 
     if (event !== 'play_started') {
       return NextResponse.json({ success: true, skipped: true })
+    }
+
+    const { data: bijou, error: bijouError } = await supabase
+      .from('bijoux')
+      .select('metadata')
+      .eq('id_bijou', id)
+      .maybeSingle()
+
+    if (bijouError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Erreur lecture bijou.',
+          details: bijouError.message,
+        },
+        { status: 500 }
+      )
+    }
+
+    const unlockAt = readUnlockAt(bijou?.metadata)
+    if (unlockAt && Date.now() < new Date(unlockAt).getTime()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'CAPSULE_LOCKED',
+        },
+        { status: 423 }
+      )
     }
 
     const { data: voice, error: voiceError } = await supabase
