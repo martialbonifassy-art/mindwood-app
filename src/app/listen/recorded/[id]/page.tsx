@@ -587,13 +587,16 @@ export default function ListenRecordedPage() {
 
                   <div className="mt-12 rounded-[2rem] border border-white/15 bg-white/8 px-6 py-8 backdrop-blur-xl">
                     <div className="text-xs uppercase tracking-[0.3em] text-stone-400">Ouverture dans</div>
-                    <div className="mt-5 text-3xl font-light leading-tight text-white md:text-5xl">
+                    <div className="mt-5 text-2xl font-light leading-tight text-white md:text-4xl">
                       {countdown
                         ? `${countdown.days} jours · ${String(countdown.hours).padStart(2, '0')} heures · ${String(countdown.minutes).padStart(2, '0')} minutes · ${String(countdown.seconds).padStart(2, '0')} secondes`
                         : 'Calcul en cours…'}
                     </div>
                     <p className="mt-5 text-sm leading-7 text-stone-400 md:text-base">
                       Patience… cette capsule s’ouvrira au moment choisi.
+                    </p>
+                    <p className="mt-3 text-xs leading-6 text-stone-500 md:text-sm">
+                      Aucune écoute n’est décomptée tant que la capsule reste verrouillée.
                     </p>
                   </div>
 
