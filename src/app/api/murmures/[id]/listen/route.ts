@@ -29,6 +29,13 @@ export async function GET(_req: Request, context: RouteContext) {
       );
     }
 
+    if (bijou.type_bijou !== "murmures_IA") {
+      return NextResponse.json(
+        { success: false, error: "Ce bijou n'est pas scellé en Murmures IA." },
+        { status: 409 }
+      );
+    }
+
     const { data: personnalisation } = await supabase
       .from("personnalisations")
       .select("prenom, theme")
@@ -78,6 +85,26 @@ export async function POST(_req: Request, context: RouteContext) {
   const { id: id_bijou } = await context.params;
 
   try {
+    const { data: bijou, error: bijouError } = await supabase
+      .from("bijoux")
+      .select("id_bijou, type_bijou")
+      .eq("id_bijou", id_bijou)
+      .maybeSingle();
+
+    if (bijouError || !bijou) {
+      return NextResponse.json(
+        { success: false, error: "Bijou introuvable." },
+        { status: 404 }
+      );
+    }
+
+    if (bijou.type_bijou !== "murmures_IA") {
+      return NextResponse.json(
+        { success: false, error: "Ce bijou n'est pas scellé en Murmures IA." },
+        { status: 409 }
+      );
+    }
+
     const { data: rpcData, error: rpcErr } = await supabase.rpc("consume_credit", {
       p_id_bijou: id_bijou,
     });
