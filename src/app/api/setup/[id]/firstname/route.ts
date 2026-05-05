@@ -56,9 +56,9 @@ function buildUpdatedMetadata(raw: unknown, variant: RecordingVariant, unlockAt:
       variant,
       unlockAt,
       countdownMessageFr:
-        "Le bois garde encore le secret. Une voix vous attend ici, mais elle a été confiée au temps.",
+        "Une voix vous attend ici, mais elle a été confiée au temps.",
       countdownMessageEn:
-        "The wood is still keeping the secret. A voice is waiting here, but it has been entrusted to time.",
+        "A voice is waiting here, but it has been entrusted to time.",
     },
   }
 }

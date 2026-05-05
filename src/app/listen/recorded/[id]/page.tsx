@@ -582,7 +582,7 @@ export default function ListenRecordedPage() {
                     {payload.capsule.countdownMessage ?? 'Une voix vous attend ici, mais elle a été confiée au temps.'}
                   </p>
                   <p className="mx-auto mt-4 max-w-xl text-base leading-8 text-stone-300 md:text-lg">
-                    Revenez lorsque le compte à rebours sera terminé : le message se dévoilera au jour choisi.
+                    Le message se dévoilera au jour choisi.
                   </p>
 
                   <div className="mt-12 rounded-[2rem] border border-white/15 bg-white/8 px-6 py-8 backdrop-blur-xl">

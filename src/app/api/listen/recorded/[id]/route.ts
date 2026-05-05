@@ -15,6 +15,28 @@ type CapsuleMetadata = {
   countdownMessageEn?: string
 }
 
+function normalizeCountdownMessage(message: string | undefined, locale: 'fr' | 'en') {
+  if (!message) {
+    return locale === 'en'
+      ? 'A voice is waiting here, but it has been entrusted to time.'
+      : 'Une voix vous attend ici, mais elle a été confiée au temps.'
+  }
+
+  if (
+    message === 'Le bois garde encore le secret. Une voix vous attend ici, mais elle a été confiée au temps.'
+  ) {
+    return 'Une voix vous attend ici, mais elle a été confiée au temps.'
+  }
+
+  if (
+    message === 'The wood is still keeping the secret. A voice is waiting here, but it has been entrusted to time.'
+  ) {
+    return 'A voice is waiting here, but it has been entrusted to time.'
+  }
+
+  return message
+}
+
 function readCapsuleMetadata(raw: unknown): CapsuleMetadata {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
 
@@ -125,10 +147,12 @@ export async function GET(
           variant: capsule.variant ?? 'standard',
           isLocked: isCapsuleLocked,
           unlockAt,
-          countdownMessage:
+          countdownMessage: normalizeCountdownMessage(
             (bijou.langue ?? 'fr') === 'en'
-              ? capsule.countdownMessageEn ?? null
-              : capsule.countdownMessageFr ?? null,
+              ? capsule.countdownMessageEn
+              : capsule.countdownMessageFr,
+            (bijou.langue ?? 'fr') === 'en' ? 'en' : 'fr'
+          ),
         },
       },
     })
