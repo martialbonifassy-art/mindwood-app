@@ -165,7 +165,7 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
 
   const [mode, setMode] = useState<"choice" | "ia">("choice");
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [bijou, setBijou] = useState<BijouRow | null>(null);
   const [perso, setPerso] = useState<PersoRow | null>(null);
 
@@ -187,6 +187,7 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
 
   const silentLoad = React.useCallback(async function silentLoad() {
     setError(null);
+    setLoading(true);
 
     try {
       const res = await fetch(`/api/listen/${id_bijou}`, {
@@ -208,6 +209,8 @@ export default function ListenClient({ locale = "fr" }: { locale?: "fr" | "en" }
       const message = error instanceof Error ? error.message : errLoading;
       setError(message);
       return null;
+    } finally {
+      setLoading(false);
     }
   }, [errLoading, id_bijou]);
 

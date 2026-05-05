@@ -31,22 +31,27 @@ const primaryButton =
 const secondaryButton =
   'inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-stone-100 transition hover:bg-white/15'
 
-function toDateTimeLocalValue(iso: string | null | undefined) {
-  if (!iso) return ''
+function toLocalDateTimeParts(iso: string | null | undefined) {
+  if (!iso) return { date: '', time: '' }
 
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return { date: '', time: '' }
 
   const offsetMs = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+  const localValue = new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+
+  return {
+    date: localValue.slice(0, 10),
+    time: localValue.slice(11, 16),
+  }
 }
 
-function fromDateTimeLocalValue(value: string) {
-  if (!value) return null
+function fromLocalDateTimeParts(date: string, time: string) {
+  if (!date || !time) return null
 
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString()
+  const parsed = new Date(`${date}T${time}`)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed.toISOString()
 }
 
 export default function SetupFirstNamePage() {
@@ -64,7 +69,8 @@ export default function SetupFirstNamePage() {
   const [firstName, setFirstName] = useState('')
   const [language, setLanguage] = useState<'fr' | 'en'>('fr')
   const [recordingVariant, setRecordingVariant] = useState<RecordingVariant>(requestedVariant)
-  const [unlockAt, setUnlockAt] = useState('')
+  const [unlockDate, setUnlockDate] = useState('')
+  const [unlockTime, setUnlockTime] = useState('')
 
   useEffect(() => {
     setRecordingVariant(requestedVariant)
@@ -105,7 +111,9 @@ export default function SetupFirstNamePage() {
               ? 'capsule'
               : 'standard'
         )
-        setUnlockAt(toDateTimeLocalValue(json.data.unlockAt))
+        const localUnlock = toLocalDateTimeParts(json.data.unlockAt)
+        setUnlockDate(localUnlock.date)
+        setUnlockTime(localUnlock.time)
       } catch (error) {
         if (!isMounted) return
         setErrorMessage(
@@ -138,7 +146,10 @@ export default function SetupFirstNamePage() {
       return
     }
 
-    const unlockAtIso = recordingVariant === 'capsule' ? fromDateTimeLocalValue(unlockAt) : null
+    const unlockAtIso =
+      recordingVariant === 'capsule'
+        ? fromLocalDateTimeParts(unlockDate, unlockTime)
+        : null
 
     if (recordingVariant === 'capsule' && !unlockAtIso) {
       setErrorMessage(
@@ -207,7 +218,7 @@ export default function SetupFirstNamePage() {
             {recordingVariant === 'capsule'
               ? language === 'en'
                 ? 'Prepare the person and the opening moment of this capsule.'
-                : 'Préparez la personne et le moment d’ouverture de cette capsule.'
+                : 'Confiez votre message au temps, et choisissez le moment où il s’ouvrira.'
               : language === 'en'
                 ? 'The first name of the person who will receive this jewel.'
                 : 'Enregistrez le prénom de la personne qui recevra ce bijou.'}
@@ -286,12 +297,22 @@ export default function SetupFirstNamePage() {
                   </label>
 
                   <input
-                    id="unlockAt"
-                    name="unlockAt"
-                    type="datetime-local"
-                    value={unlockAt}
-                    onChange={(e) => setUnlockAt(e.target.value)}
-                    className="w-full rounded-[1.4rem] border border-amber-200/15 bg-black/20 px-5 py-5 text-xl text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-100/40 focus:bg-black/25"
+                    id="unlockAtDate"
+                    name="unlockAtDate"
+                    type="date"
+                    value={unlockDate}
+                    onChange={(e) => setUnlockDate(e.target.value)}
+                    className="w-full rounded-[1.4rem] border border-amber-200/15 bg-black/20 px-5 py-5 text-xl text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-100/40 focus:bg-black/25 [color-scheme:dark]"
+                  />
+
+                  <input
+                    id="unlockAtTime"
+                    name="unlockAtTime"
+                    type="time"
+                    step={60}
+                    value={unlockTime}
+                    onChange={(e) => setUnlockTime(e.target.value)}
+                    className="w-full rounded-[1.4rem] border border-amber-200/15 bg-black/20 px-5 py-5 text-xl text-stone-100 outline-none transition placeholder:text-stone-500 focus:border-amber-100/40 focus:bg-black/25 [color-scheme:dark]"
                   />
 
                   <p className="text-sm leading-7 text-stone-400">
