@@ -31,7 +31,7 @@ export async function GET(_req: Request, context: RouteContext) {
 
     if (bijou.type_bijou !== "murmures_IA") {
       return NextResponse.json(
-        { success: false, error: "Ce bijou n'est pas scellé en Murmures IA." },
+        { success: false, error: "Ce bijou n'a pas encore été scellé." },
         { status: 409 }
       );
     }
@@ -100,7 +100,7 @@ export async function POST(_req: Request, context: RouteContext) {
 
     if (bijou.type_bijou !== "murmures_IA") {
       return NextResponse.json(
-        { success: false, error: "Ce bijou n'est pas scellé en Murmures IA." },
+        { success: false, error: "Ce bijou n'a pas encore été scellé." },
         { status: 409 }
       );
     }
