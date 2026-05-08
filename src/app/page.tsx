@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { getLocaleFromHost } from "@/lib/i18n";
 
 export default async function Home() {
@@ -13,12 +14,14 @@ export default async function Home() {
           title: "Direct access",
           text: "No manual input is required.",
           hint: "English version (appadli.com)",
+          businesses: "For businesses",
         }
       : {
           subtitle: "Ouvrez directement l'experience de votre bijou.",
           title: "Accès direct",
           text: "Aucune saisie manuelle n'est requise.",
           hint: "Version française (appadli.fr)",
+          businesses: "Pour les entreprises",
         };
 
   return (
@@ -37,6 +40,15 @@ export default async function Home() {
           <p className="text-sm uppercase tracking-wide mw-link">{copy.title}</p>
           <p className="mt-3 text-base leading-relaxed mw-muted">{copy.text}</p>
           <p className="mt-5 text-xs" style={{ color: "var(--gold)" }}>{copy.hint}</p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/entreprises"
+            className="mw-btn-primary inline-flex items-center justify-center px-6 py-3 text-sm uppercase tracking-[0.16em]"
+          >
+            {copy.businesses}
+          </Link>
         </div>
       </section>
     </main>
