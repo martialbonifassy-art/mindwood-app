@@ -168,6 +168,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
   const params = useParams();
   const id = useMemo(() => String(params?.id ?? ""), [params]);
   const c = COPY[locale];
+  const { errAudio, errOpenFailed, errUnavailable, forPrefix, forYou, listeningLabel } = c;
 
   const [stage, setStage] = useState<Stage>("arrival");
   const [payload, setPayload] = useState<ListenPayload | null>(null);
@@ -179,7 +180,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
   const [hasEnded, setHasEnded] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [displayLine, setDisplayLine] = useState<string>(c.listeningLabel);
+  const [displayLine, setDisplayLine] = useState<string>(listeningLabel);
   const [isCheckingRecharge, setIsCheckingRecharge] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
@@ -213,7 +214,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
 
         const json = (await res.json()) as ApiResponse;
         if (!res.ok || !json.success || !json.data?.audioUrl) {
-          throw new Error(json.error || c.errUnavailable);
+          throw new Error(json.error || errUnavailable);
         }
 
         if (!isMounted) return;
@@ -230,7 +231,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : c.errOpenFailed
+            : errOpenFailed
         );
         setStage("error");
       } finally {
@@ -245,7 +246,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [errOpenFailed, errUnavailable, id]);
 
   useEffect(() => {
     if (!payload?.audioUrl) return;
@@ -274,7 +275,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
     const onPlay = () => {
       setIsPlaying(true);
       setHasStarted(true);
-      setDisplayLine(payload.firstName ? `${c.forPrefix}${payload.firstName}` : c.forYou);
+      setDisplayLine(payload.firstName ? `${forPrefix}${payload.firstName}` : forYou);
     };
 
     const onPause = () => {
@@ -290,7 +291,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
     };
 
     const onError = () => {
-      setErrorMessage(c.errAudio);
+      setErrorMessage(errAudio);
       setStage("error");
     };
 
@@ -320,7 +321,7 @@ export default function MurmureListenClient({ locale = "fr" }: { locale?: "fr" |
       audio.removeEventListener("error", onError);
       audioRef.current = null;
     };
-  }, [payload?.audioUrl, payload?.firstName]);
+  }, [errAudio, forPrefix, forYou, payload?.audioUrl, payload?.firstName]);
 
   useEffect(() => {
     const audio = audioRef.current;

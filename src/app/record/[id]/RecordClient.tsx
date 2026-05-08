@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -42,6 +43,7 @@ export default function RecordClient() {
   const [state, setState] = useState<FlowState>("intro");
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingDurationSeconds, setRecordingDurationSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showRecorder, setShowRecorder] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -99,10 +101,7 @@ export default function RecordClient() {
     return Boolean(id_bijou && audioBlob && audioUrl);
   }, [id_bijou, audioBlob, audioUrl]);
 
-  async function handleRecordingComplete(
-    blob: Blob,
-    _durationSeconds: number
-  ) {
+  async function handleRecordingComplete(blob: Blob, durationSeconds: number) {
     setError(null);
 
     if (!blob || blob.size === 0) {
@@ -115,6 +114,7 @@ export default function RecordClient() {
     }
 
     setAudioBlob(blob);
+    setRecordingDurationSeconds(durationSeconds);
     setAudioUrl(URL.createObjectURL(blob));
     setState("review");
   }
@@ -144,7 +144,7 @@ export default function RecordClient() {
         body: JSON.stringify({
           id_bijou,
           audioBase64: base64,
-          durationSeconds: 120,
+          durationSeconds: recordingDurationSeconds || 120,
           isDraft: false,
         }),
       });
@@ -175,6 +175,7 @@ export default function RecordClient() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setAudioBlob(null);
+    setRecordingDurationSeconds(0);
     setShowActions(false);
     setState("record");
   }
@@ -331,7 +332,7 @@ export default function RecordClient() {
       {isClosing && (
         <div className="closingOverlay">
           <div className="closingLogo">
-            <img src="/logo.png" alt="Mindwood" />
+            <Image src="/logo.png" alt="Mindwood" width={144} height={144} priority />
           </div>
           {showCloseHint && (
             <p className="closeHint">Vous pouvez fermer cet onglet</p>

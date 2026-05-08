@@ -14,11 +14,6 @@ type VoixEnregistree = {
   lectures_totales: number;
 };
 
-type Bijou = {
-  id_bijou: string;
-  [key: string]: unknown;
-};
-
 export default function RecordedListenClient() {
   const params = useParams();
   const router = useRouter();
@@ -34,7 +29,6 @@ export default function RecordedListenClient() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [bijou, setBijou] = useState<Bijou | null>(null);
   const [voix, setVoix] = useState<VoixEnregistree | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -48,14 +42,13 @@ export default function RecordedListenClient() {
     const loadData = async () => {
       try {
         // Récupérer le bijou
-        const { data: bijouData, error: bijouError } = await supabase
+        const { error: bijouError } = await supabase
           .from("bijoux")
           .select("*")
           .eq("id_bijou", id_bijou)
           .single();
 
         if (bijouError) throw bijouError;
-        setBijou(bijouData);
 
         // Récupérer la voix enregistrée
         const { data: voixData, error: voixError } = await supabase
